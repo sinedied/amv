@@ -1,0 +1,42 @@
+{
+  "name": "amv",
+  "version": "1.0.0",
+  "description": "Quick AI Renamer - AI-powered bulk file and folder renaming tool",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "amv": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "vite build && cp dist/web/components.js public/components.js",
+    "dev": "vite build --watch",
+    "start": "node dist/cli/index.js",
+    "type-check": "tsc --noEmit",
+    "postbuild": "cp dist/web/components.js public/components.js"
+  },
+  "keywords": [
+    "ai",
+    "rename",
+    "files",
+    "cli",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/static": "^6.12.0",
+    "commander": "^11.1.0",
+    "fastify": "^4.24.3",
+    "lit": "^3.1.0",
+    "openai": "^4.20.1",
+    "open": "^9.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
