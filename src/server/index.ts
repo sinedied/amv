@@ -48,14 +48,17 @@ export async function startServer(port: number, model: string) {
     const { files, rules } = request.body;
 
     try {
-      const prompt = `You are a file renaming assistant. Given the following files and renaming rules, suggest new names for each file.
+      const prompt = `## Goal
+You are a file renaming assistant. Given the following files and renaming rules, suggest new names for each file.
 
-Rules: ${rules}
+## Rules
+${rules}
 
-Files to rename:
+## Files to rename
 ${files.map((file, index) => `${index + 1}. ${file.originalName} (${file.isDirectory ? 'directory' : 'file'})`).join('\n')}
 
-Please respond with a JSON array of suggested names in the same order as the files listed above. Each suggestion should be a string containing only the new filename/directory name (without path). Keep file extensions if they exist.
+## Output format
+Respond with a JSON array of suggested names in the same order as the files listed above. Each suggestion should be a string containing only the new filename/directory name (without path). Keep file extensions if they exist.
 
 Example response format:
 ["new-name-1.txt", "new-name-2", "new-name-3.jpg"]`;
@@ -63,8 +66,7 @@ Example response format:
       const response = await openai.chat.completions.create({
         model,
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1000
+        temperature: 0.3,
       });
 
       const content = response.choices[0]?.message?.content;
