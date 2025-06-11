@@ -24,10 +24,17 @@ export interface RenameRequest {
 export async function startServer(port: number, model: string) {
   const fastify = Fastify({ logger: false });
 
-  // Serve static files
+  // Serve static files from public directory
   await fastify.register(fastifyStatic, {
     root: join(__dirname, '../../public'),
     prefix: '/'
+  });
+
+  // Serve built web assets from dist/web directory
+  await fastify.register(fastifyStatic, {
+    root: join(__dirname, '../web'),
+    prefix: '/web/',
+    decorateReply: false
   });
 
   // Initialize OpenAI client for Ollama
