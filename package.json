@@ -8,11 +8,11 @@
     "amv": "bin/amv.js"
   },
   "scripts": {
-    "build": "vite build && cp dist/web/components.js public/components.js",
+    "build": "vite build && cp dist/web/components.js public/components.js && cp dist/web/app.js public/app.js",
     "dev": "vite build --watch",
     "start": "node bin/amv.js",
     "type-check": "tsc --noEmit",
-    "postbuild": "cp dist/web/components.js public/components.js"
+    "postbuild": "cp dist/web/components.js public/components.js && cp dist/web/app.js public/app.js"
   },
   "keywords": [
     "ai",

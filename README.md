@@ -15,7 +15,7 @@ AI-powered bulk file and folder renaming tool with a simple web interface.
 ## Prerequisites
 
 - Node.js v20 or higher
-- [Ollama](https://ollama.ai/) running locally with a supported model (default: `gemma2`)
+- [Ollama](https://ollama.ai/) running locally with a supported model (default: `gemma3`)
 
 ## Installation
 
@@ -53,7 +53,7 @@ amv [options]
 
 Options:
   -p, --port <port>    Port to run the server on (default: 3000)
-  -m, --model <model>  AI model to use (default: gemma2)
+  -m, --model <model>  AI model to use (default: gemma3)
   --no-open            Do not open browser automatically
   -h, --help           Display help for command
 ```

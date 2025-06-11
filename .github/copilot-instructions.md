@@ -19,7 +19,7 @@
 - **Frontend**: Lit v3 web components, CSS variables, container queries
 - **Backend**: Fastify server with @fastify/static
 - **CLI**: Commander.js
-- **AI**: OpenAI SDK with Ollama backend (default model: gemma2)
+- **AI**: OpenAI SDK with Ollama backend (default model: gemma3)
 - **Build**: Vite
 
 ## Code Structure
@@ -98,7 +98,7 @@ dist/                 # Build output
 ### Ollama Configuration
 - Base URL: `http://localhost:11434/v1`
 - API key: `'ollama'` (placeholder, not validated)
-- Default model: `gemma2`
+- Default model: `gemma3`
 - Model configurable via CLI `--model` flag
 
 ### Prompt Engineering
