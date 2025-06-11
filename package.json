@@ -8,10 +8,12 @@
     "amv": "bin/amv.js"
   },
   "scripts": {
-    "build": "vite build",
-    "dev": "vite build --watch",
+    "build": "npm run build:node && npm run build:web",
+    "build:node": "tsc -p tsconfig.node.json",
+    "build:web": "vite build",
+    "dev": "npm run build:node -- --watch & npm run build:web -- --watch",
     "start": "node bin/amv.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit"
   },
   "keywords": [
     "ai",
