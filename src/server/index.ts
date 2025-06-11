@@ -44,63 +44,67 @@ export async function startServer(port: number, model: string) {
   });
 
   // API Routes
+  // Instead of batching, make one AI call per file and return results as soon as all are ready
   fastify.post<{ Body: RenameRequest }>('/api/suggest-names', async (request, reply) => {
     const { files, rules } = request.body;
 
     try {
-      const prompt = `## Goal
-You are a file renaming assistant. Given the following files and renaming rules, suggest new names for each file.
+      // For streaming results as they come, consider Fastify's reply.raw.write for future improvement
+      // For now, process sequentially and return all at once
+      const updatedFiles: FileItem[] = [];
+
+      for (const file of files) {
+        const prompt = `## Goal
+You are a file renaming assistant. Given the following file and renaming rules, suggest a new name for the file.
 
 ## Rules
 ${rules}
 
-## Files to rename
-${files.map(file => file.originalName).join('\n')}
+## File to rename
+${file.originalName}${file.isDirectory ? ' (directory)' : ''}
 
 ## Output format
-Respond with a JSON object with a single property "suggestions", which is an array of suggested names in the same order as the files listed above. Each suggestion should be a string containing only the new filename/directory name (without path). Keep file extensions if they exist.
+Respond with a JSON object with a single property "suggestion", which is a string containing only the new filename or directory name (without path). Keep file extensions if they exist.
 
 Example response format:
-{ "suggestions": ["new-name-1.txt", "new-name-2", "new-name-3.jpg"] }`;
+{ "suggestion": "new-name.txt" }`;
 
-      const response = await openai.chat.completions.create({
-        model,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
-      });
+        let suggestedName = file.originalName;
+        try {
+          const response = await openai.chat.completions.create({
+            model,
+            messages: [
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.3,
+            response_format: { type: 'json_object' }
+          });
 
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('No response from AI model');
+          const content = response.choices[0]?.message?.content;
+          if (!content) {
+            throw new Error('No response from AI model');
+          }
+
+          let suggestion: string | undefined;
+          try {
+            suggestion = JSON.parse(content)?.suggestion;
+          } catch (parseError) {
+            console.error('Failed to parse AI response as JSON:', parseError);
+            console.error('AI response content:', content);
+            throw new Error(`AI model returned invalid JSON response. Please check if the model is working correctly. Response: ${content.substring(0, 100)}...`);
+          }
+
+          if (typeof suggestion !== 'string' || !suggestion.trim()) {
+            throw new Error('AI did not return a valid suggestion');
+          }
+          suggestedName = suggestion;
+        } catch (error) {
+          console.error(`AI suggestion error for file ${file.originalName}:`, error);
+          // Keep original name if suggestion fails
+        }
+
+        updatedFiles.push({ ...file, suggestedName });
       }
-
-      // Try to parse JSON response
-      let suggestions: string[];
-      try {
-        suggestions = JSON.parse(content)?.suggestions;
-      } catch (parseError) {
-        console.error('Failed to parse AI response as JSON:', parseError);
-        console.error('AI response content:', content);
-        throw new Error(`AI model returned invalid JSON response. Please check if the model is working correctly. Response: ${content.substring(0, 100)}...`);
-      }
-
-      // Validate that we have the correct number of suggestions
-      if (!Array.isArray(suggestions) || suggestions.length !== files.length) {
-        console.error('AI response validation failed:', { 
-          expected: files.length, 
-          received: suggestions?.length || 0,
-          suggestions 
-        });
-        throw new Error(`AI model returned ${suggestions?.length || 0} suggestions but expected ${files.length}. Please try again or check your AI model.`);
-      }
-
-      const updatedFiles = files.map((file, index) => ({
-        ...file,
-        suggestedName: suggestions[index] || file.originalName
-      }));
 
       reply.send({ files: updatedFiles });
     } catch (error) {
