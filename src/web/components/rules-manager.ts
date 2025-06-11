@@ -44,7 +44,6 @@ export class RulesManager extends LitElement {
   render() {
     return html`
       <div class="form-group">
-        <label for="rules">Renaming Rules:</label>
         <textarea
           id="rules"
           .value=${this.rules}

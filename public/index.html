@@ -256,21 +256,40 @@
         padding: 0.5rem;
       }
     }
+    .flex-row {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .card-half {
+      flex: 1 1 0;
+      min-width: 320px;
+    }
+    @media (max-width: 900px) {
+      .flex-row {
+        flex-direction: column;
+        gap: 0;
+      }
+      .card-half {
+        min-width: 0;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>amv</h1>
     <p class="subtitle">Quick AI Renamer - Bulk file and folder renaming with AI</p>
-    
-    <div class="card">
-      <h2>Add Files or Folders</h2>
-      <file-manager></file-manager>
-    </div>
 
-    <div class="card">
-      <h2>AI Renaming Rules</h2>
-      <rules-manager></rules-manager>
+    <div class="flex-row">
+      <div class="card card-half">
+        <h2>Add Files or Folders</h2>
+        <file-manager></file-manager>
+      </div>
+      <div class="card card-half">
+        <h2>AI Renaming Rules</h2>
+        <rules-manager></rules-manager>
+      </div>
     </div>
 
     <div class="card">
