@@ -8,7 +8,6 @@ export default defineConfig({
       entry: {
         'cli/index': 'src/cli/index.ts',
         'server/index': 'src/server/index.ts',
-        'web/components': 'src/web/components.ts',
         'web/app': 'src/web/app.ts'
       },
       formats: ['es']

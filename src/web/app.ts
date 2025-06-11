@@ -1,4 +1,4 @@
-import './components.js';
+import './index.js';
 
 // Initialize the app
 function initApp() {
