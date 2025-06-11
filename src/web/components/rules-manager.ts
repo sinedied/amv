@@ -6,6 +6,9 @@ export class RulesManager extends LitElement {
   @state()
   private rules = '';
 
+  @state()
+  private model = 'gemma3';
+
   static styles = css`
     label {
       display: block;
@@ -14,19 +17,26 @@ export class RulesManager extends LitElement {
       color: var(--text-primary);
     }
 
-    textarea {
+    .form-group {
+      margin-bottom: 0.75rem;
+    }
+
+    textarea, input {
       width: 100%;
       padding: 0.75rem;
       border: 1px solid var(--border);
       border-radius: 8px;
       font-size: 1rem;
-      resize: vertical;
-      min-height: 120px;
       transition: border-color 0.2s;
       box-sizing: border-box;
     }
 
-    textarea:focus {
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    textarea:focus, input:focus {
       outline: none;
       border-color: var(--primary-color);
       box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
@@ -35,12 +45,23 @@ export class RulesManager extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadRules();
+    this.loadData();
   }
 
   render() {
     return html`
       <div class="form-group">
+        <label for="model">AI Model</label>
+        <input
+          id="model"
+          type="text"
+          .value=${this.model}
+          @input=${this.handleModelChange}
+          placeholder="gemma3, llama3, etc."
+        />
+      </div>
+      <div class="form-group">
+        <label for="rules">Renaming Rules</label>
         <textarea
           id="rules"
           .value=${this.rules}
@@ -51,10 +72,21 @@ export class RulesManager extends LitElement {
     `;
   }
 
+  private handleModelChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    this.model = target.value;
+    this.saveData();
+    
+    this.dispatchEvent(new CustomEvent('model-changed', {
+      detail: this.model,
+      bubbles: true
+    }));
+  }
+
   private handleRulesChange(e: Event) {
     const target = e.target as HTMLTextAreaElement;
     this.rules = target.value;
-    this.saveRules();
+    this.saveData();
     
     this.dispatchEvent(new CustomEvent('rules-changed', {
       detail: this.rules,
@@ -62,18 +94,28 @@ export class RulesManager extends LitElement {
     }));
   }
 
-  private loadRules() {
-    const saved = localStorage.getItem('amv-rules');
-    if (saved) {
-      this.rules = saved;
+  private loadData() {
+    const savedRules = localStorage.getItem('amv-rules');
+    if (savedRules) {
+      this.rules = savedRules;
+    }
+    
+    const savedModel = localStorage.getItem('amv-model');
+    if (savedModel) {
+      this.model = savedModel;
     }
   }
 
-  private saveRules() {
+  private saveData() {
     localStorage.setItem('amv-rules', this.rules);
+    localStorage.setItem('amv-model', this.model);
   }
 
   getRules() {
     return this.rules;
+  }
+
+  getModel() {
+    return this.model;
   }
 }

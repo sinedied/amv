@@ -19,9 +19,10 @@ export interface FileItem {
 export interface RenameRequest {
   files: FileItem[];
   rules: string;
+  model?: string;
 }
 
-export async function startServer(port: number, model: string) {
+export async function startServer(port: number, defaultModel: string) {
   const fastify = Fastify({ logger: false });
 
   // Serve static files from public directory
@@ -37,16 +38,15 @@ export async function startServer(port: number, model: string) {
     decorateReply: false
   });
 
-  // Initialize OpenAI client for Ollama
-  const openai = new OpenAI({
-    baseURL: 'http://localhost:11434/v1',
-    apiKey: 'ollama' // Ollama doesn't require a real API key
-  });
-
-  // API Routes
-  // Instead of batching, make one AI call per file and return results as soon as all are ready
   fastify.post<{ Body: RenameRequest }>('/api/suggest-names', async (request, reply) => {
-    const { files, rules } = request.body;
+    const { files, rules, model: requestModel } = request.body;
+    const model = requestModel || defaultModel;
+
+    // Initialize OpenAI client for Ollama (create per request to allow different models)
+    const openai = new OpenAI({
+      baseURL: 'http://localhost:11434/v1',
+      apiKey: 'ollama' // Ollama doesn't require a real API key
+    });
 
     try {
       // For streaming results as they come, consider Fastify's reply.raw.write for future improvement
@@ -175,7 +175,7 @@ Example response format:
 
   // Health check
   fastify.get('/api/health', async () => {
-    return { status: 'ok', model };
+    return { status: 'ok', model: defaultModel };
   });
 
   // Start server

@@ -206,6 +206,7 @@ export class FileList extends LitElement {
   private async generateSuggestions() {
     const rulesManager = document.querySelector('rules-manager') as RulesManager;
     const rules = rulesManager?.getRules() || '';
+    const model = rulesManager?.getModel() || 'gemma3';
 
     if (!rules.trim()) {
       this.showMessage('Please enter some renaming rules first.', 'error');
@@ -231,7 +232,8 @@ export class FileList extends LitElement {
             },
             body: JSON.stringify({
               files: [file],
-              rules
+              rules,
+              model
             })
           });
 

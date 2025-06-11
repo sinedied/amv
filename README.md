@@ -5,10 +5,11 @@ AI-powered bulk file and folder renaming tool with a simple web interface.
 ## Features
 
 - 🤖 **AI-Powered**: Uses local LLM (Ollama) to suggest intelligent file names
+- 🔄 **Model Selection**: Override AI model directly from the web interface
 - 🖱️ **Drag & Drop**: Easy file and folder selection
 - 🌐 **Web Interface**: Clean, responsive UI that opens automatically
 - 📝 **Rule-Based**: Define custom renaming rules in natural language
-- 💾 **Persistent Rules**: Last used rules are saved locally
+- 💾 **Persistent Settings**: Rules and model preferences are saved locally
 - ⚡ **Batch Operations**: Rename multiple files and folders at once
 - 🚀 **One Command**: Single CLI command to start everything
 
@@ -73,11 +74,18 @@ amv --no-open
 
 ## How It Works
 
-1. **Add Files**: Drag and drop files/folders or use the browse button
-2. **Set Rules**: Define how you want files renamed (e.g., "convert to kebab-case", "add date prefix")
+1. **Configure Settings**: Set your preferred AI model and renaming rules
+2. **Add Files**: Drag and drop files/folders or use the browse button
 3. **Generate Suggestions**: Click "Generate AI Suggestions" to get AI-powered name suggestions
 4. **Preview**: Review the original and suggested names in the table
 5. **Rename**: Click "Rename Files" to apply the changes
+
+### Model Selection
+
+The web interface includes an AI model field where you can specify which Ollama model to use:
+- **Default**: `gemma3` (can be overridden via CLI `--model` flag)
+- **Override**: Enter any available Ollama model name (e.g., `llama3`, `mistral`, etc.)
+- **Persistence**: Your model preference is saved in browser localStorage
 
 ## Example Renaming Rules
 
