@@ -49,24 +49,27 @@ export async function startServer(port: number, model: string) {
 
     try {
       const prompt = `## Goal
-You are a file renaming assistant. Given the following files and renaming rules, suggest new names for each file.
+    You are a file renaming assistant. Given the following files and renaming rules, suggest new names for each file.
 
-## Rules
-${rules}
+    ## Rules
+    ${rules}
 
-## Files to rename
-${files.map((file, index) => `${index + 1}. ${file.originalName} (${file.isDirectory ? 'directory' : 'file'})`).join('\n')}
+    ## Files to rename
+    ${files.map((file, index) => `${index + 1}. ${file.originalName} (${file.isDirectory ? 'directory' : 'file'})`).join('\n')}
 
-## Output format
-Respond with a JSON array of suggested names in the same order as the files listed above. Each suggestion should be a string containing only the new filename/directory name (without path). Keep file extensions if they exist.
+    ## Output format
+    Respond with a JSON object with a single property "suggestions", which is an array of suggested names in the same order as the files listed above. Each suggestion should be a string containing only the new filename/directory name (without path). Keep file extensions if they exist.
 
-Example response format:
-["new-name-1.txt", "new-name-2", "new-name-3.jpg"]`;
+    Example response format:
+    { "suggestions": ["new-name-1.txt", "new-name-2", "new-name-3.jpg"] }`;
 
       const response = await openai.chat.completions.create({
         model,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'user', content: prompt }
+        ],
         temperature: 0.3,
+        response_format: { type: 'json_object' }
       });
 
       const content = response.choices[0]?.message?.content;
@@ -77,10 +80,21 @@ Example response format:
       // Try to parse JSON response
       let suggestions: string[];
       try {
-        suggestions = JSON.parse(content);
-      } catch {
-        // Fallback: extract suggestions from text
-        suggestions = files.map(file => file.originalName);
+        suggestions = JSON.parse(content)?.suggestions;
+      } catch (parseError) {
+        console.error('Failed to parse AI response as JSON:', parseError);
+        console.error('AI response content:', content);
+        throw new Error(`AI model returned invalid JSON response. Please check if the model is working correctly. Response: ${content.substring(0, 100)}...`);
+      }
+
+      // Validate that we have the correct number of suggestions
+      if (!Array.isArray(suggestions) || suggestions.length !== files.length) {
+        console.error('AI response validation failed:', { 
+          expected: files.length, 
+          received: suggestions?.length || 0,
+          suggestions 
+        });
+        throw new Error(`AI model returned ${suggestions?.length || 0} suggestions but expected ${files.length}. Please try again or check your AI model.`);
       }
 
       const updatedFiles = files.map((file, index) => ({

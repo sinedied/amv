@@ -228,7 +228,22 @@ export class FileList extends LitElement {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        // Try to extract detailed error message from response
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+            if (errorData.details) {
+              errorMessage += ` - ${errorData.details}`;
+            }
+          }
+        } catch {
+          // If we can't parse the error response, use the generic message
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
