@@ -45,7 +45,7 @@ const de = (r) => new ne(typeof r == "string" ? r : r + "", void 0, B), q = (r, 
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const { is: pe, defineProperty: ge, getOwnPropertyDescriptor: fe, getOwnPropertyNames: $e, getOwnPropertySymbols: me, getPrototypeOf: ye } = Object, j = globalThis, Q = j.trustedTypes, _e = Q ? Q.emptyScript : "", be = j.reactiveElementPolyfillSupport, P = (r, e) => r, N = { toAttribute(r, e) {
+const { is: pe, defineProperty: ge, getOwnPropertyDescriptor: fe, getOwnPropertyNames: $e, getOwnPropertySymbols: me, getPrototypeOf: ye } = Object, z = globalThis, Q = z.trustedTypes, _e = Q ? Q.emptyScript : "", be = z.reactiveElementPolyfillSupport, P = (r, e) => r, N = { toAttribute(r, e) {
   switch (e) {
     case Boolean:
       r = r ? _e : null;
@@ -74,7 +74,7 @@ const { is: pe, defineProperty: ge, getOwnPropertyDescriptor: fe, getOwnProperty
   }
   return t;
 } }, V = (r, e) => !pe(r, e), X = { attribute: !0, type: String, converter: N, reflect: !1, useDefault: !1, hasChanged: V };
-Symbol.metadata ??= Symbol("metadata"), j.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+Symbol.metadata ??= Symbol("metadata"), z.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
 let w = class extends HTMLElement {
   static addInitializer(e) {
     this._$Ei(), (this.l ??= []).push(e);
@@ -254,7 +254,7 @@ let w = class extends HTMLElement {
   firstUpdated(e) {
   }
 };
-w.elementStyles = [], w.shadowRootOptions = { mode: "open" }, w[P("elementProperties")] = /* @__PURE__ */ new Map(), w[P("finalized")] = /* @__PURE__ */ new Map(), be?.({ ReactiveElement: w }), (j.reactiveElementVersions ??= []).push("2.1.0");
+w.elementStyles = [], w.shadowRootOptions = { mode: "open" }, w[P("elementProperties")] = /* @__PURE__ */ new Map(), w[P("finalized")] = /* @__PURE__ */ new Map(), be?.({ ReactiveElement: w }), (z.reactiveElementVersions ??= []).push("2.1.0");
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -293,7 +293,7 @@ class T {
       if (i.nodeType === 1) {
         if (i.hasAttributes()) for (const h of i.getAttributeNames()) if (h.endsWith(ae)) {
           const p = u[n++], f = i.getAttribute(h).split($), U = /([.?@])?(.*)/.exec(p);
-          a.push({ type: 1, index: o, name: U[2], strings: f, ctor: U[1] === "." ? xe : U[1] === "?" ? Ce : U[1] === "@" ? Pe : z }), i.removeAttribute(h);
+          a.push({ type: 1, index: o, name: U[2], strings: f, ctor: U[1] === "." ? xe : U[1] === "?" ? Ce : U[1] === "@" ? Pe : j }), i.removeAttribute(h);
         } else h.startsWith($) && (a.push({ type: 6, index: o }), i.removeAttribute(h));
         if (he.test(i.tagName)) {
           const h = i.textContent.split($), p = h.length - 1;
@@ -409,7 +409,7 @@ class k {
     this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
   }
 }
-class z {
+class j {
   get tagName() {
     return this.element.tagName;
   }
@@ -434,7 +434,7 @@ class z {
     e === d ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
   }
 }
-class xe extends z {
+class xe extends j {
   constructor() {
     super(...arguments), this.type = 3;
   }
@@ -442,7 +442,7 @@ class xe extends z {
     this.element[this.name] = e === d ? void 0 : e;
   }
 }
-class Ce extends z {
+class Ce extends j {
   constructor() {
     super(...arguments), this.type = 4;
   }
@@ -450,7 +450,7 @@ class Ce extends z {
     this.element.toggleAttribute(this.name, !!e && e !== d);
   }
 }
-class Pe extends z {
+class Pe extends j {
   constructor(e, t, s, i, o) {
     super(e, t, s, i, o), this.type = 5;
   }
@@ -590,7 +590,6 @@ let D = class extends b {
         <input 
           type="file" 
           multiple 
-          webkitdirectory
           @change=${this.handleFileInput}
           id="fileInput"
         >
@@ -619,7 +618,7 @@ let D = class extends b {
     const e = r.map((t) => ({
       path: t.webkitRelativePath || t.name,
       name: t.name,
-      isDirectory: !1,
+      isDirectory: t.type === "" && t.size === 0,
       originalName: t.name
     }));
     this.dispatchEvent(new CustomEvent("files-added", {

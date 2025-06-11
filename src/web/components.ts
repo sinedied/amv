@@ -53,7 +53,6 @@ export class FileManager extends LitElement {
         <input 
           type="file" 
           multiple 
-          webkitdirectory
           @change=${this.handleFileInput}
           id="fileInput"
         >
@@ -93,7 +92,7 @@ export class FileManager extends LitElement {
     const fileItems: FileItem[] = files.map(file => ({
       path: file.webkitRelativePath || file.name,
       name: file.name,
-      isDirectory: false,
+      isDirectory: file.type === '' && file.size === 0,
       originalName: file.name
     }));
 
