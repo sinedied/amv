@@ -216,11 +216,13 @@ export class FileList extends LitElement {
     this.clearMessage();
 
     try {
+      // Clear existing suggestions before generating new ones
+      this.files = this.files.map(file => ({ ...file, suggestedName: undefined }));
+
       // Make one request per file for progressive updates
       const updatedFiles: FileItem[] = [...this.files];
       for (let i = 0; i < this.files.length; i++) {
         const file = this.files[i];
-        // Optionally show per-file loading state here
         try {
           const response = await fetch('/api/suggest-names', {
             method: 'POST',
