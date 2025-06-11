@@ -10,7 +10,7 @@ export function cli(args: string[]) {
     .description('Quick AI Renamer - AI-powered bulk file and folder renaming tool')
     .version('1.0.0')
     .option('-p, --port <port>', 'Port to run the server on', '3000')
-    .option('-m, --model <model>', 'AI model to use', 'gemma3')
+    .option('-m, --model <model>', 'AI model to use (default: gemma3, supports azure:deployment-name)', 'gemma3')
     .option('--no-open', 'Do not open browser automatically')
     .action(async (options) => {
       const port = parseInt(options.port);

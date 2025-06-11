@@ -41,6 +41,14 @@ export class RulesManager extends LitElement {
       border-color: var(--primary-color);
       box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
     }
+
+    .help-text {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+      line-height: 1.4;
+    }
   `;
 
   connectedCallback() {
@@ -57,8 +65,11 @@ export class RulesManager extends LitElement {
           type="text"
           .value=${this.model}
           @input=${this.handleModelChange}
-          placeholder="gemma3, llama3, etc."
+          placeholder="gemma3, llama3, azure:gpt-4o, etc."
         />
+        <small class="help-text">
+          Use Ollama models (e.g., gemma3, llama3) or Azure OpenAI with "azure:" prefix (e.g., azure:gpt-4o, azure:gpt-4o-mini)
+        </small>
       </div>
       <div class="form-group">
         <label for="rules">Renaming Rules</label>

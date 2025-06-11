@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +8,41 @@ import { OpenAI } from 'openai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load environment variables from .env file in current working directory
+dotenv.config();
+
+function createOpenAIClient(model: string): OpenAI {
+  if (model.startsWith('azure:')) {
+    // Azure OpenAI configuration
+    const endpoint = process.env.AZURE_OPENAI_API_ENDPOINT;
+    const apiKey = process.env.AZURE_OPENAI_API_KEY;
+    
+    if (!endpoint || !apiKey) {
+      throw new Error('Azure OpenAI requires AZURE_OPENAI_API_ENDPOINT and AZURE_OPENAI_API_KEY environment variables');
+    }
+    
+    const deploymentName = model.slice(6); // Remove "azure:" prefix
+    console.log(`Creating Azure OpenAI client for deployment: ${deploymentName}`);
+    console.log(`Endpoint: ${endpoint}`);
+    
+    return new OpenAI({
+      baseURL: `${endpoint.replace(/\/$/, '')}/openai/deployments/${deploymentName}`,
+      apiKey,
+      defaultQuery: { 'api-version': '2024-08-01-preview' },
+      defaultHeaders: {
+        'api-key': apiKey,
+      },
+    });
+  } else {
+    // Ollama configuration (default)
+    console.log(`Creating Ollama client for model: ${model}`);
+    return new OpenAI({
+      baseURL: 'http://localhost:11434/v1',
+      apiKey: 'ollama' // Ollama doesn't require a real API key
+    });
+  }
+}
 
 export interface FileItem {
   path: string;
@@ -42,13 +78,15 @@ export async function startServer(port: number, defaultModel: string) {
     const { files, rules, model: requestModel } = request.body;
     const model = requestModel || defaultModel;
 
-    // Initialize OpenAI client for Ollama (create per request to allow different models)
-    const openai = new OpenAI({
-      baseURL: 'http://localhost:11434/v1',
-      apiKey: 'ollama' // Ollama doesn't require a real API key
-    });
-
     try {
+      // Initialize OpenAI client based on model type (create per request to allow different models)
+      const openai = createOpenAIClient(model);
+      
+      // For Azure OpenAI, we use the deployment name directly as the model
+      // For Ollama, we use the model name as-is
+      const actualModel = model.startsWith('azure:') ? model.slice(6) : model;
+      
+      console.log(`Using provider: ${model.startsWith('azure:') ? 'Azure OpenAI' : 'Ollama'}, model: ${actualModel}`);
       // For streaming results as they come, consider Fastify's reply.raw.write for future improvement
       // For now, process sequentially and return all at once
       const updatedFiles: FileItem[] = [];
@@ -75,14 +113,20 @@ Example response format:
         // Retry up to 3 times
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            const response = await openai.chat.completions.create({
-              model,
+            const isAzure = model.startsWith('azure:');
+            const completionParams: any = {
+              model: actualModel,
               messages: [
                 { role: 'user', content: prompt }
               ],
               temperature: 0.3,
-              response_format: { type: 'json_object' }
-            });
+            };
+            
+            // Add response_format for JSON output (supported by both Azure and Ollama)
+            completionParams.response_format = { type: 'json_object' };
+            
+            console.log(`Making API call to ${isAzure ? 'Azure OpenAI' : 'Ollama'} with model: ${actualModel}`);
+            const response = await openai.chat.completions.create(completionParams);
 
             const content = response.choices[0]?.message?.content;
             if (!content) {
@@ -175,7 +219,15 @@ Example response format:
 
   // Health check
   fastify.get('/api/health', async () => {
-    return { status: 'ok', model: defaultModel };
+    const azureConfigured = !!(process.env.AZURE_OPENAI_API_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
+    return { 
+      status: 'ok', 
+      model: defaultModel,
+      providers: {
+        ollama: 'http://localhost:11434',
+        azure: azureConfigured ? 'configured' : 'not configured'
+      }
+    };
   });
 
   // Start server
