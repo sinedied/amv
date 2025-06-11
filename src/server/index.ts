@@ -61,16 +61,10 @@ export interface RenameRequest {
 export async function startServer(port: number, defaultModel: string) {
   const fastify = Fastify({ logger: false });
 
-  // Serve static files from public directory
-  await fastify.register(fastifyStatic, {
-    root: join(__dirname, '../../public'),
-    prefix: '/'
-  });
-
   // Serve built web assets from dist/web directory
   await fastify.register(fastifyStatic, {
     root: join(__dirname, '../web'),
-    prefix: '/web/',
+    prefix: '/',
     decorateReply: false
   });
 
