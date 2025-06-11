@@ -7,10 +7,6 @@ export class RulesManager extends LitElement {
   private rules = '';
 
   static styles = css`
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
     label {
       display: block;
       font-weight: 500;
@@ -27,6 +23,7 @@ export class RulesManager extends LitElement {
       resize: vertical;
       min-height: 120px;
       transition: border-color 0.2s;
+      box-sizing: border-box;
     }
 
     textarea:focus {

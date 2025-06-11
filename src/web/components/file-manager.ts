@@ -13,12 +13,19 @@ export class FileManager extends LitElement {
 
   static styles = css`
     .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 8px;
-      padding: 2rem;
+      border: 1.5px dashed var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
       text-align: center;
       transition: all 0.2s;
       cursor: pointer;
+      background: var(--background);
+      min-height: 2.5em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25em;
     }
 
     .drop-zone:hover, .drop-zone.drag-over {
@@ -27,8 +34,9 @@ export class FileManager extends LitElement {
     }
 
     .drop-zone p {
-      margin-bottom: 1rem;
+      margin: 0;
       color: var(--text-secondary);
+      font-size: 0.97em;
     }
 
     input[type="file"] {
@@ -38,7 +46,7 @@ export class FileManager extends LitElement {
 
   render() {
     return html`
-      <div style="margin-bottom:1rem;text-align:left;">
+      <div class="form-group" style="margin-bottom:0;text-align:left;">
         <label style="font-size:0.95em;cursor:pointer;">
           <input type="checkbox"
             .checked=${this.loadFilesInFolders}
