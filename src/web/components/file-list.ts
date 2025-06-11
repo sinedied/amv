@@ -256,8 +256,9 @@ export class FileList extends LitElement {
           updatedFiles[i] = result.files[0];
           this.files = [...updatedFiles]; // trigger UI update for progress
         } catch (error) {
-          // If a single file fails, keep its original name and continue
-          updatedFiles[i] = { ...file, suggestedName: file.originalName };
+          // If a single file fails, leave the suggested name undefined and continue
+          console.warn(`Failed to get suggestion for file ${file.originalName}:`, error);
+          updatedFiles[i] = { ...file, suggestedName: undefined };
           this.files = [...updatedFiles];
         }
       }
