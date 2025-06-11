@@ -69,38 +69,58 @@ Respond with a JSON object with a single property "suggestion", which is a strin
 Example response format:
 { "suggestion": "new-name.txt" }`;
 
-        let suggestedName = file.originalName;
-        try {
-          const response = await openai.chat.completions.create({
-            model,
-            messages: [
-              { role: 'user', content: prompt }
-            ],
-            temperature: 0.3,
-            response_format: { type: 'json_object' }
-          });
-
-          const content = response.choices[0]?.message?.content;
-          if (!content) {
-            throw new Error('No response from AI model');
-          }
-
-          let suggestion: string | undefined;
+        let suggestedName: string | undefined;
+        let lastError: Error | undefined;
+        
+        // Retry up to 3 times
+        for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            suggestion = JSON.parse(content)?.suggestion;
-          } catch (parseError) {
-            console.error('Failed to parse AI response as JSON:', parseError);
-            console.error('AI response content:', content);
-            throw new Error(`AI model returned invalid JSON response. Please check if the model is working correctly. Response: ${content.substring(0, 100)}...`);
-          }
+            const response = await openai.chat.completions.create({
+              model,
+              messages: [
+                { role: 'user', content: prompt }
+              ],
+              temperature: 0.3,
+              response_format: { type: 'json_object' }
+            });
 
-          if (typeof suggestion !== 'string' || !suggestion.trim()) {
-            throw new Error('AI did not return a valid suggestion');
+            const content = response.choices[0]?.message?.content;
+            if (!content) {
+              throw new Error('No response from AI model');
+            }
+
+            let suggestion: string | undefined;
+            try {
+              suggestion = JSON.parse(content)?.suggestion;
+            } catch (parseError) {
+              console.error('Failed to parse AI response as JSON:', parseError);
+              console.error('AI response content:', content);
+              throw new Error(`AI model returned invalid JSON response. Please check if the model is working correctly. Response: ${content.substring(0, 100)}...`);
+            }
+
+            if (typeof suggestion !== 'string' || !suggestion.trim()) {
+              throw new Error('AI did not return a valid suggestion');
+            }
+            
+            suggestedName = suggestion;
+            break; // Success, exit retry loop
+          } catch (error) {
+            lastError = error instanceof Error ? error : new Error('Unknown error');
+            console.error(`AI suggestion error for file ${file.originalName} (attempt ${attempt}/3):`, error);
+            
+            // If this was the last attempt, we'll throw below
+            if (attempt === 3) {
+              break;
+            }
+            
+            // Wait a bit before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, attempt * 1000));
           }
-          suggestedName = suggestion;
-        } catch (error) {
-          console.error(`AI suggestion error for file ${file.originalName}:`, error);
-          // Keep original name if suggestion fails
+        }
+
+        // If we couldn't get a suggestion after all retries, fail the entire request
+        if (!suggestedName) {
+          throw new Error(`Failed to generate AI suggestion for file "${file.originalName}" after 3 attempts. Last error: ${lastError?.message || 'Unknown error'}`);
         }
 
         updatedFiles.push({ ...file, suggestedName });
