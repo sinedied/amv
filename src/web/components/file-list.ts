@@ -216,38 +216,47 @@ export class FileList extends LitElement {
     this.clearMessage();
 
     try {
-      const response = await fetch('/api/suggest-names', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          files: this.files,
-          rules
-        })
-      });
-
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
-        // Try to extract detailed error message from response
+      // Make one request per file for progressive updates
+      const updatedFiles: FileItem[] = [...this.files];
+      for (let i = 0; i < this.files.length; i++) {
+        const file = this.files[i];
+        // Optionally show per-file loading state here
         try {
-          const errorData = await response.json();
-          if (errorData.error) {
-            errorMessage = errorData.error;
-            if (errorData.details) {
-              errorMessage += ` - ${errorData.details}`;
-            }
-          }
-        } catch {
-          // If we can't parse the error response, use the generic message
-        }
-        
-        throw new Error(errorMessage);
-      }
+          const response = await fetch('/api/suggest-names', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              files: [file],
+              rules
+            })
+          });
 
-      const result = await response.json();
-      this.files = result.files;
+          if (!response.ok) {
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            try {
+              const errorData = await response.json();
+              if (errorData.error) {
+                errorMessage = errorData.error;
+                if (errorData.details) {
+                  errorMessage += ` - ${errorData.details}`;
+                }
+              }
+            } catch {}
+            throw new Error(errorMessage);
+          }
+
+          const result = await response.json();
+          // result.files is an array with one file
+          updatedFiles[i] = result.files[0];
+          this.files = [...updatedFiles]; // trigger UI update for progress
+        } catch (error) {
+          // If a single file fails, keep its original name and continue
+          updatedFiles[i] = { ...file, suggestedName: file.originalName };
+          this.files = [...updatedFiles];
+        }
+      }
       this.showMessage('AI suggestions generated successfully!', 'success');
     } catch (error) {
       console.error('Failed to generate suggestions:', error);
