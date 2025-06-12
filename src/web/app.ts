@@ -34,7 +34,7 @@ async function checkServerHealth() {
 
 function checkFileSystemAccessAPI() {
   const hasFileSystemAccess = 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
-  const hasDragDropSupport = typeof DataTransferItem.prototype.getAsFileSystemHandle === 'function';
+  const hasDragDropSupport = typeof (DataTransferItem.prototype as any).getAsFileSystemHandle === 'function';
   
   if (!hasFileSystemAccess) {
     console.warn('File System Access API not supported. Renaming functionality will be limited.');

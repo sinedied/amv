@@ -2,6 +2,26 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import type { FileItem } from '../types.js';
 
+// Extend interfaces for File System Access API
+declare global {
+  interface DataTransferItem {
+    getAsFileSystemHandle?(): Promise<FileSystemHandle>;
+  }
+  
+  interface FileSystemHandle {
+    requestPermission?(options: { mode: 'read' | 'readwrite' }): Promise<'granted' | 'denied' | 'prompt'>;
+  }
+  
+  interface FileSystemDirectoryHandle {
+    entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
+  }
+  
+  interface Window {
+    showOpenFilePicker?(options?: any): Promise<FileSystemFileHandle[]>;
+    showDirectoryPicker?(options?: any): Promise<FileSystemDirectoryHandle>;
+  }
+}
+
 @customElement('file-manager')
 export class FileManager extends LitElement {
 
@@ -115,25 +135,27 @@ export class FileManager extends LitElement {
       
       for (const handle of handles) {
         if (handle.kind === 'file') {
-          const file = await handle.getFile();
+          const fileHandle = handle as FileSystemFileHandle;
+          const file = await fileHandle.getFile();
           fileItems.push({
             path: file.name,
             name: file.name,
             isDirectory: false,
             originalName: file.name,
-            handle: handle
+            handle: fileHandle
           });
         } else if (handle.kind === 'directory') {
+          const dirHandle = handle as FileSystemDirectoryHandle;
           if (this.loadFilesInFolders) {
-            const dirItems = await this.processDirectoryHandle(handle);
+            const dirItems = await this.processDirectoryHandle(dirHandle);
             fileItems.push(...dirItems);
           } else {
             fileItems.push({
-              path: handle.name,
-              name: handle.name,
+              path: dirHandle.name,
+              name: dirHandle.name,
               isDirectory: true,
-              originalName: handle.name,
-              handle: handle
+              originalName: dirHandle.name,
+              handle: dirHandle
             });
           }
         }
@@ -168,47 +190,50 @@ export class FileManager extends LitElement {
 
     try {
       // Try File System Access API for drag & drop if available
-      if (dt.items && dt.items.length > 0 && typeof DataTransferItem.prototype.getAsFileSystemHandle === 'function') {
+      if (dt.items && dt.items.length > 0 && typeof (DataTransferItem.prototype as any).getAsFileSystemHandle === 'function') {
         
         for (let i = 0; i < dt.items.length; i++) {
           const item = dt.items[i];
           
           if (item.kind === 'file') {
             try {
-              const handle = await item.getAsFileSystemHandle();
+              const handle = await item.getAsFileSystemHandle?.();
               if (handle) {
                 useFileSystemAccess = true;
                 
                 if (handle.kind === 'file') {
                   // Request permission for the file
-                  const permission = await handle.requestPermission({ mode: 'readwrite' });
+                  const fileHandle = handle as FileSystemFileHandle;
+                  const permission = await (fileHandle as any).requestPermission?.({ mode: 'readwrite' });
                   if (permission === 'granted') {
-                    const file = await handle.getFile();
+                    const file = await fileHandle.getFile();
                     fileItems.push({
                       path: file.name,
                       name: file.name,
                       isDirectory: false,
                       originalName: file.name,
-                      handle: handle
+                      handle: fileHandle
                     });
                   }
                 } else if (handle.kind === 'directory' && this.loadFilesInFolders) {
                   // Request permission for the directory
-                  const permission = await handle.requestPermission({ mode: 'readwrite' });
+                  const dirHandle = handle as FileSystemDirectoryHandle;
+                  const permission = await (dirHandle as any).requestPermission?.({ mode: 'readwrite' });
                   if (permission === 'granted') {
-                    const dirItems = await this.processDirectoryHandle(handle);
+                    const dirItems = await this.processDirectoryHandle(dirHandle);
                     fileItems.push(...dirItems);
                   }
                 } else if (handle.kind === 'directory') {
                   // Just add the directory itself if not loading files in folders
-                  const permission = await handle.requestPermission({ mode: 'readwrite' });
+                  const dirHandle = handle as FileSystemDirectoryHandle;
+                  const permission = await (dirHandle as any).requestPermission?.({ mode: 'readwrite' });
                   if (permission === 'granted') {
                     fileItems.push({
-                      path: handle.name,
-                      name: handle.name,
+                      path: dirHandle.name,
+                      name: dirHandle.name,
                       isDirectory: true,
-                      originalName: handle.name,
-                      handle: handle
+                      originalName: dirHandle.name,
+                      handle: dirHandle
                     });
                   }
                 }
@@ -240,28 +265,31 @@ export class FileManager extends LitElement {
     const fileItems: FileItem[] = [];
     
     try {
-      for await (const [name, handle] of dirHandle.entries()) {
+      // Use async iterator for directory entries
+      for await (const [name, handle] of (dirHandle as any).entries()) {
         if (handle.kind === 'file') {
-          const file = await handle.getFile();
+          const fileHandle = handle as FileSystemFileHandle;
+          const file = await fileHandle.getFile();
           fileItems.push({
             path: `${dirHandle.name}/${file.name}`,
             name: file.name,
             isDirectory: false,
             originalName: file.name,
-            handle: handle
+            handle: fileHandle
           });
         } else if (handle.kind === 'directory') {
+          const subDirHandle = handle as FileSystemDirectoryHandle;
           // Add the directory itself
           fileItems.push({
-            path: `${dirHandle.name}/${handle.name}`,
-            name: handle.name,
+            path: `${dirHandle.name}/${subDirHandle.name}`,
+            name: subDirHandle.name,
             isDirectory: true,
-            originalName: handle.name,
-            handle: handle
+            originalName: subDirHandle.name,
+            handle: subDirHandle
           });
           
           // Recursively process subdirectory
-          const subItems = await this.processDirectoryHandle(handle);
+          const subItems = await this.processDirectoryHandle(subDirHandle);
           fileItems.push(...subItems);
         }
       }
