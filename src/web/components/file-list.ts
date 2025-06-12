@@ -31,7 +31,7 @@ export class FileList extends LitElement {
     }
 
     th, td {
-      padding: 0.75rem;
+      padding: 0.5rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
