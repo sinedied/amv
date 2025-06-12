@@ -225,13 +225,22 @@ export class FileList extends LitElement {
       for (let i = 0; i < this.files.length; i++) {
         const file = this.files[i];
         try {
+          // Create a serializable version of the file object (exclude handle)
+          const serializableFile = {
+            path: file.path,
+            name: file.name,
+            isDirectory: file.isDirectory,
+            originalName: file.originalName,
+            suggestedName: file.suggestedName
+          };
+
           const response = await fetch('/api/suggest-names', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              files: [file],
+              files: [serializableFile],
               rules,
               model
             })
@@ -252,8 +261,8 @@ export class FileList extends LitElement {
           }
 
           const result = await response.json();
-          // result.files is an array with one file
-          updatedFiles[i] = result.files[0];
+          // result.files is an array with one file - merge suggestion back with original file (including handle)
+          updatedFiles[i] = { ...file, suggestedName: result.files[0].suggestedName };
           this.files = [...updatedFiles]; // trigger UI update for progress
         } catch (error) {
           // If a single file fails, leave the suggested name undefined and continue
