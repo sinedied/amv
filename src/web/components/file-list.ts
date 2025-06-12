@@ -276,23 +276,56 @@ export class FileList extends LitElement {
     this.clearMessage();
 
     try {
-      const response = await fetch('/api/rename-files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          files: this.files
-        })
-      });
+      const results = [];
+      let successful = 0;
+      let failed = 0;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      for (const file of this.files) {
+        if (!file.suggestedName || file.suggestedName === file.originalName) {
+          results.push({ success: false, error: 'No new name suggested', file: file.originalName });
+          failed++;
+          continue;
+        }
+
+        if (!file.handle) {
+          results.push({ success: false, error: 'No file handle available (use File System Access API)', file: file.originalName });
+          failed++;
+          continue;
+        }
+
+        try {
+          // Use File System Access API to rename the file/directory
+          if (file.handle.kind === 'file') {
+            const fileHandle = file.handle as FileSystemFileHandle;
+            
+            // Check if move method is available
+            if (typeof (fileHandle as any).move === 'function') {
+              await (fileHandle as any).move(file.suggestedName);
+            } else {
+              throw new Error('Move operation not supported by this browser');
+            }
+          } else if (file.handle.kind === 'directory') {
+            const dirHandle = file.handle as FileSystemDirectoryHandle;
+            
+            // Check if move method is available  
+            if (typeof (dirHandle as any).move === 'function') {
+              await (dirHandle as any).move(file.suggestedName);
+            } else {
+              throw new Error('Move operation not supported by this browser');
+            }
+          }
+          
+          results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
+          successful++;
+        } catch (error) {
+          results.push({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error',
+            file: file.originalName 
+          });
+          failed++;
+        }
       }
-
-      const result = await response.json();
-      const successful = result.results.filter((r: any) => r.success).length;
-      const failed = result.results.filter((r: any) => !r.success).length;
 
       if (failed === 0) {
         this.showMessage(`Successfully renamed ${successful} files!`, 'success');

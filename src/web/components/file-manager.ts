@@ -76,8 +76,76 @@ export class FileManager extends LitElement {
   }
 
   private handleClick() {
-    const input = this.shadowRoot?.getElementById('fileInput') as HTMLInputElement;
-    input?.click();
+    // Use File System Access API for file picking if available
+    if ('showOpenFilePicker' in window) {
+      this.handleFileSystemPicker();
+    } else {
+      // Fallback to traditional file input
+      const input = this.shadowRoot?.getElementById('fileInput') as HTMLInputElement;
+      input?.click();
+    }
+  }
+
+  private async handleFileSystemPicker() {
+    try {
+      const options: any = {
+        multiple: true,
+        excludeAcceptAllOption: false
+      };
+
+      let handles: FileSystemHandle[];
+      
+      if (this.loadFilesInFolders) {
+        // Pick directories
+        if ('showDirectoryPicker' in window) {
+          handles = [await (window as any).showDirectoryPicker()];
+        } else {
+          throw new Error('Directory picker not supported');
+        }
+      } else {
+        // Pick files
+        if ('showOpenFilePicker' in window) {
+          handles = await (window as any).showOpenFilePicker(options);
+        } else {
+          throw new Error('File picker not supported');
+        }
+      }
+
+      const fileItems: FileItem[] = [];
+      
+      for (const handle of handles) {
+        if (handle.kind === 'file') {
+          const file = await handle.getFile();
+          fileItems.push({
+            path: file.name,
+            name: file.name,
+            isDirectory: false,
+            originalName: file.name,
+            handle: handle
+          });
+        } else if (handle.kind === 'directory') {
+          if (this.loadFilesInFolders) {
+            const dirItems = await this.processDirectoryHandle(handle);
+            fileItems.push(...dirItems);
+          } else {
+            fileItems.push({
+              path: handle.name,
+              name: handle.name,
+              isDirectory: true,
+              originalName: handle.name,
+              handle: handle
+            });
+          }
+        }
+      }
+      
+      this.dispatchFileItems(fileItems);
+    } catch (error) {
+      console.error('Error with file system picker:', error);
+      // User probably cancelled, or API not supported
+      const input = this.shadowRoot?.getElementById('fileInput') as HTMLInputElement;
+      input?.click();
+    }
   }
 
   private handleDragOver(e: DragEvent) {
@@ -92,6 +160,122 @@ export class FileManager extends LitElement {
   private async handleDrop(e: DragEvent) {
     e.preventDefault();
     this.dragOver = false;
+    const dt = e.dataTransfer;
+    if (!dt) return;
+
+    try {
+      // Use File System Access API for drag & drop
+      if (dt.items && dt.items.length > 0) {
+        const fileItems: FileItem[] = [];
+        
+        for (let i = 0; i < dt.items.length; i++) {
+          const item = dt.items[i];
+          
+          // Get file handle from drag & drop using the correct API
+          if (item.kind === 'file') {
+            try {
+              // Use the new getAsFileSystemHandle method if available
+              if (typeof item.getAsFileSystemHandle === 'function') {
+                const handle = await item.getAsFileSystemHandle();
+                if (handle) {
+                  if (handle.kind === 'file') {
+                    // Request permission for the file
+                    const permission = await handle.requestPermission({ mode: 'readwrite' });
+                    if (permission === 'granted') {
+                      const file = await handle.getFile();
+                      fileItems.push({
+                        path: file.name,
+                        name: file.name,
+                        isDirectory: false,
+                        originalName: file.name,
+                        handle: handle
+                      });
+                    }
+                  } else if (handle.kind === 'directory' && this.loadFilesInFolders) {
+                    // Request permission for the directory
+                    const permission = await handle.requestPermission({ mode: 'readwrite' });
+                    if (permission === 'granted') {
+                      const dirItems = await this.processDirectoryHandle(handle);
+                      fileItems.push(...dirItems);
+                    }
+                  } else if (handle.kind === 'directory') {
+                    // Just add the directory itself if not loading files in folders
+                    const permission = await handle.requestPermission({ mode: 'readwrite' });
+                    if (permission === 'granted') {
+                      fileItems.push({
+                        path: handle.name,
+                        name: handle.name,
+                        isDirectory: true,
+                        originalName: handle.name,
+                        handle: handle
+                      });
+                    }
+                  }
+                }
+              } else {
+                // Fallback if File System Access API is not supported
+                throw new Error('File System Access API not supported');
+              }
+            } catch (error) {
+              console.warn('Failed to get file system handle:', error);
+              // Continue with next item
+            }
+          }
+        }
+        
+        if (fileItems.length > 0) {
+          this.dispatchFileItems(fileItems);
+        } else {
+          // If no items were processed with File System Access API, fall back to legacy
+          this.handleLegacyDrop(e);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling file drop:', error);
+      // Fallback to traditional drag & drop if File System Access API fails
+      this.handleLegacyDrop(e);
+    }
+  }
+
+  // Process directory handle recursively
+  private async processDirectoryHandle(dirHandle: FileSystemDirectoryHandle): Promise<FileItem[]> {
+    const fileItems: FileItem[] = [];
+    
+    try {
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'file') {
+          const file = await handle.getFile();
+          fileItems.push({
+            path: `${dirHandle.name}/${file.name}`,
+            name: file.name,
+            isDirectory: false,
+            originalName: file.name,
+            handle: handle
+          });
+        } else if (handle.kind === 'directory') {
+          // Add the directory itself
+          fileItems.push({
+            path: `${dirHandle.name}/${handle.name}`,
+            name: handle.name,
+            isDirectory: true,
+            originalName: handle.name,
+            handle: handle
+          });
+          
+          // Recursively process subdirectory
+          const subItems = await this.processDirectoryHandle(handle);
+          fileItems.push(...subItems);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing directory:', error);
+    }
+    
+    return fileItems;
+  }
+
+  // Fallback to legacy drag & drop
+  private async handleLegacyDrop(e: DragEvent) {
     const dt = e.dataTransfer;
     if (!dt) return;
 
@@ -113,8 +297,6 @@ export class FileManager extends LitElement {
       this.processFiles(files);
     }
   }
-
-  // Recursively get all files from dropped directory entries
   private async getFilesFromEntries(entries: any[]): Promise<File[]> {
     const files: File[] = [];
     for (const entry of entries) {
@@ -176,17 +358,22 @@ export class FileManager extends LitElement {
     this.loadFilesInFolders = target.checked;
   }
 
+  private dispatchFileItems(fileItems: FileItem[]) {
+    this.dispatchEvent(new CustomEvent('files-added', {
+      detail: fileItems,
+      bubbles: true
+    }));
+  }
+
   private processFiles(files: File[]) {
     const fileItems: FileItem[] = files.map(file => ({
       path: file.webkitRelativePath || file.name,
       name: file.name,
       isDirectory: file.type === '' && file.size === 0,
       originalName: file.name
+      // Note: no handle for legacy files - renaming won't work
     }));
 
-    this.dispatchEvent(new CustomEvent('files-added', {
-      detail: fileItems,
-      bubbles: true
-    }));
+    this.dispatchFileItems(fileItems);
   }
 }
