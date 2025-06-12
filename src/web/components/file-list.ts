@@ -305,11 +305,8 @@ export class FileList extends LitElement {
         try {
           // Use File System Access API to rename the file/directory
           const handle = file.handle;
-          
-          // Check if the handle has the move method
-          if (typeof (handle as any).move === 'function') {
-            // Try to move the file/directory with the new name
-            await (handle as any).move(file.suggestedName);
+          if (handle && typeof handle.move === 'function') {
+            await handle.move(file.suggestedName);
             results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
             successful++;
           } else {
@@ -319,10 +316,10 @@ export class FileList extends LitElement {
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          results.push({ 
-            success: false, 
+          results.push({
+            success: false,
             error: errorMessage,
-            file: file.originalName 
+            file: file.originalName
           });
           failed++;
         }
