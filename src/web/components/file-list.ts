@@ -225,22 +225,13 @@ export class FileList extends LitElement {
       for (let i = 0; i < this.files.length; i++) {
         const file = this.files[i];
         try {
-          // Create a serializable version of the file object (exclude handle)
-          const serializableFile = {
-            path: file.path,
-            name: file.name,
-            isDirectory: file.isDirectory,
-            originalName: file.originalName,
-            suggestedName: file.suggestedName
-          };
-
           const response = await fetch('/api/suggest-names', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              files: [serializableFile],
+              files: [file],
               rules,
               model
             })
@@ -261,8 +252,8 @@ export class FileList extends LitElement {
           }
 
           const result = await response.json();
-          // result.files is an array with one file - merge suggestion back with original file (including handle)
-          updatedFiles[i] = { ...file, suggestedName: result.files[0].suggestedName };
+          // result.files is an array with one file
+          updatedFiles[i] = result.files[0];
           this.files = [...updatedFiles]; // trigger UI update for progress
         } catch (error) {
           // If a single file fails, leave the suggested name undefined and continue
@@ -306,33 +297,16 @@ export class FileList extends LitElement {
           // Use File System Access API to rename the file/directory
           const handle = file.handle;
           
-          if (handle.kind === 'file') {
-            // For files, get the file object first and then call move()
-            const fileHandle = handle as FileSystemFileHandle;
-            const fileObj = await fileHandle.getFile();
-            
-            // Check if the file object has the move method
-            if (typeof (fileObj as any).move === 'function') {
-              await (fileObj as any).move(file.suggestedName);
-              results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
-              successful++;
-            } else {
-              throw new Error('File renaming not supported: move() method is not available on File object');
-            }
-          } else if (handle.kind === 'directory') {
-            // For directories, get the directory and then call move()
-            const dirHandle = handle as FileSystemDirectoryHandle;
-            
-            // Check if the directory handle has the move method
-            if (typeof (dirHandle as any).move === 'function') {
-              await (dirHandle as any).move(file.suggestedName);
-              results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
-              successful++;
-            } else {
-              throw new Error('Directory renaming not supported: move() method is not available on directory handle');
-            }
+          // Check if the handle has the move method
+          if (typeof (handle as any).move === 'function') {
+            // Try to move the file/directory with the new name
+            await (handle as any).move(file.suggestedName);
+            results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
+            successful++;
           } else {
-            throw new Error('Unknown handle type');
+            // If move is not available, we need to use a different approach
+            // This is a fallback for when the move API is not yet implemented
+            throw new Error('File renaming not supported: File System Access API move() method is not available in this browser');
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
