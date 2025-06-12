@@ -5,4 +5,6 @@ export interface FileItem {
   originalName: string;
   suggestedName?: string;
   handle?: FileSystemFileHandle | FileSystemDirectoryHandle;
+  renameStatus?: 'success' | 'warning' | 'error';
+  renameError?: string;
 }

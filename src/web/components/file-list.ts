@@ -47,9 +47,17 @@ export class FileList extends LitElement {
       width: 5%;
     }
 
-    th:nth-child(2), td:nth-child(2),
+    th:nth-child(2), td:nth-child(2) {
+      width: 45%;
+    }
+
     th:nth-child(3), td:nth-child(3) {
-      width: 47.5%;
+      width: 45%;
+    }
+
+    th:nth-child(4), td:nth-child(4) {
+      width: 5%;
+      text-align: center;
     }
 
     tr:hover {
@@ -193,6 +201,7 @@ export class FileList extends LitElement {
               <th>Type</th>
               <th>Original Name</th>
               <th>Suggested Name</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -201,6 +210,11 @@ export class FileList extends LitElement {
                 <td>${file.isDirectory ? '📁' : '📄'}</td>
                 <td>${file.originalName}</td>
                 <td>${file.suggestedName || '-'}</td>
+                <td>
+                  ${file.renameStatus === 'success' ? html`<span title="Successfully renamed">✅</span>` : 
+                    file.renameStatus === 'warning' ? html`<span title="Same name">⚠️</span>` :
+                    file.renameStatus === 'error' ? html`<span title="${file.renameError || 'Rename failed'}">❌</span>` : ''}
+                </td>
               </tr>
             `)}
           </tbody>
@@ -227,8 +241,13 @@ export class FileList extends LitElement {
     this.clearMessage();
 
     try {
-      // Clear existing suggestions before generating new ones
-      this.files = this.files.map(file => ({ ...file, suggestedName: undefined }));
+      // Clear existing suggestions and status before generating new ones
+      this.files = this.files.map(file => ({ 
+        ...file, 
+        suggestedName: undefined,
+        renameStatus: undefined,
+        renameError: undefined
+      }));
 
       // Make one request per file for progressive updates
       const updatedFiles: FileItem[] = [...this.files];
@@ -299,14 +318,29 @@ export class FileList extends LitElement {
       let successful = 0;
       let failed = 0;
 
-      for (const file of this.files) {
+      // Create a copy of files array to track updates
+      const updatedFiles = [...this.files];
+
+      for (let i = 0; i < this.files.length; i++) {
+        const file = this.files[i];
+        
         if (!file.suggestedName || file.suggestedName === file.originalName) {
+          updatedFiles[i] = { 
+            ...file, 
+            renameStatus: 'warning',
+            renameError: 'No new name suggested or same as original'
+          };
           results.push({ success: false, error: 'No new name suggested', file: file.originalName });
           failed++;
           continue;
         }
 
         if (!file.handle) {
+          updatedFiles[i] = { 
+            ...file, 
+            renameStatus: 'error',
+            renameError: 'File System Access API required - please re-add files using drag & drop or file picker'
+          };
           results.push({ success: false, error: 'File System Access API required - please re-add files using drag & drop or file picker', file: file.originalName });
           failed++;
           continue;
@@ -317,6 +351,7 @@ export class FileList extends LitElement {
           const handle = file.handle;
           if (handle && typeof handle.move === 'function') {
             await handle.move(file.suggestedName);
+            updatedFiles[i] = { ...file, renameStatus: 'success' };
             results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
             successful++;
           } else {
@@ -326,6 +361,11 @@ export class FileList extends LitElement {
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          updatedFiles[i] = { 
+            ...file, 
+            renameStatus: 'error',
+            renameError: errorMessage
+          };
           results.push({
             success: false,
             error: errorMessage,
@@ -335,9 +375,11 @@ export class FileList extends LitElement {
         }
       }
 
+      // Update the files array with status information
+      this.files = updatedFiles;
+
       if (failed === 0) {
         this.showMessage(`Successfully renamed ${successful} files!`, 'success');
-        this.files = [];
       } else if (successful > 0) {
         this.showMessage(`Renamed ${successful} files, ${failed} failed. Check console for details.`, 'error');
         console.warn('Rename failures:', results.filter(r => !r.success));
