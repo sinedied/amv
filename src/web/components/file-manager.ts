@@ -163,78 +163,76 @@ export class FileManager extends LitElement {
     const dt = e.dataTransfer;
     if (!dt) return;
 
+    let useFileSystemAccess = false;
+    const fileItems: FileItem[] = [];
+
     try {
-      // Use File System Access API for drag & drop
-      if (dt.items && dt.items.length > 0) {
-        const fileItems: FileItem[] = [];
+      // Try File System Access API for drag & drop if available
+      if (dt.items && dt.items.length > 0 && typeof DataTransferItem.prototype.getAsFileSystemHandle === 'function') {
         
         for (let i = 0; i < dt.items.length; i++) {
           const item = dt.items[i];
           
-          // Get file handle from drag & drop using the correct API
           if (item.kind === 'file') {
             try {
-              // Use the new getAsFileSystemHandle method if available
-              if (typeof item.getAsFileSystemHandle === 'function') {
-                const handle = await item.getAsFileSystemHandle();
-                if (handle) {
-                  if (handle.kind === 'file') {
-                    // Request permission for the file
-                    const permission = await handle.requestPermission({ mode: 'readwrite' });
-                    if (permission === 'granted') {
-                      const file = await handle.getFile();
-                      fileItems.push({
-                        path: file.name,
-                        name: file.name,
-                        isDirectory: false,
-                        originalName: file.name,
-                        handle: handle
-                      });
-                    }
-                  } else if (handle.kind === 'directory' && this.loadFilesInFolders) {
-                    // Request permission for the directory
-                    const permission = await handle.requestPermission({ mode: 'readwrite' });
-                    if (permission === 'granted') {
-                      const dirItems = await this.processDirectoryHandle(handle);
-                      fileItems.push(...dirItems);
-                    }
-                  } else if (handle.kind === 'directory') {
-                    // Just add the directory itself if not loading files in folders
-                    const permission = await handle.requestPermission({ mode: 'readwrite' });
-                    if (permission === 'granted') {
-                      fileItems.push({
-                        path: handle.name,
-                        name: handle.name,
-                        isDirectory: true,
-                        originalName: handle.name,
-                        handle: handle
-                      });
-                    }
+              const handle = await item.getAsFileSystemHandle();
+              if (handle) {
+                useFileSystemAccess = true;
+                
+                if (handle.kind === 'file') {
+                  // Request permission for the file
+                  const permission = await handle.requestPermission({ mode: 'readwrite' });
+                  if (permission === 'granted') {
+                    const file = await handle.getFile();
+                    fileItems.push({
+                      path: file.name,
+                      name: file.name,
+                      isDirectory: false,
+                      originalName: file.name,
+                      handle: handle
+                    });
+                  }
+                } else if (handle.kind === 'directory' && this.loadFilesInFolders) {
+                  // Request permission for the directory
+                  const permission = await handle.requestPermission({ mode: 'readwrite' });
+                  if (permission === 'granted') {
+                    const dirItems = await this.processDirectoryHandle(handle);
+                    fileItems.push(...dirItems);
+                  }
+                } else if (handle.kind === 'directory') {
+                  // Just add the directory itself if not loading files in folders
+                  const permission = await handle.requestPermission({ mode: 'readwrite' });
+                  if (permission === 'granted') {
+                    fileItems.push({
+                      path: handle.name,
+                      name: handle.name,
+                      isDirectory: true,
+                      originalName: handle.name,
+                      handle: handle
+                    });
                   }
                 }
-              } else {
-                // Fallback if File System Access API is not supported
-                throw new Error('File System Access API not supported');
               }
             } catch (error) {
-              console.warn('Failed to get file system handle:', error);
-              // Continue with next item
+              console.warn('Failed to get file system handle for item:', error);
+              // Continue to next item
             }
           }
         }
-        
-        if (fileItems.length > 0) {
-          this.dispatchFileItems(fileItems);
-        } else {
-          // If no items were processed with File System Access API, fall back to legacy
-          this.handleLegacyDrop(e);
-        }
+      }
+      
+      // If we successfully got items with File System Access API, use them
+      if (useFileSystemAccess && fileItems.length > 0) {
+        this.dispatchFileItems(fileItems);
+        return;
       }
     } catch (error) {
-      console.error('Error handling file drop:', error);
-      // Fallback to traditional drag & drop if File System Access API fails
-      this.handleLegacyDrop(e);
+      console.warn('File System Access API drag & drop failed:', error);
     }
+
+    // Fallback to legacy drag & drop
+    console.log('Using legacy drag & drop handling');
+    this.handleLegacyDrop(e);
   }
 
   // Process directory handle recursively

@@ -201,6 +201,15 @@ export class FileList extends LitElement {
 
   addFiles(newFiles: FileItem[]) {
     this.files = [...this.files, ...newFiles];
+    
+    // Check if any files don't have handles and warn the user
+    const filesWithoutHandles = newFiles.filter(file => !file.handle);
+    if (filesWithoutHandles.length > 0) {
+      this.showMessage(
+        `Warning: ${filesWithoutHandles.length} file(s) were added without File System Access API support. Renaming may not work. Please use a modern browser and re-add files via drag & drop or file picker.`, 
+        'error'
+      );
+    }
   }
 
   private async generateSuggestions() {
@@ -288,39 +297,31 @@ export class FileList extends LitElement {
         }
 
         if (!file.handle) {
-          results.push({ success: false, error: 'No file handle available (use File System Access API)', file: file.originalName });
+          results.push({ success: false, error: 'File System Access API required - please re-add files using drag & drop or file picker', file: file.originalName });
           failed++;
           continue;
         }
 
         try {
           // Use File System Access API to rename the file/directory
-          if (file.handle.kind === 'file') {
-            const fileHandle = file.handle as FileSystemFileHandle;
-            
-            // Check if move method is available
-            if (typeof (fileHandle as any).move === 'function') {
-              await (fileHandle as any).move(file.suggestedName);
-            } else {
-              throw new Error('Move operation not supported by this browser');
-            }
-          } else if (file.handle.kind === 'directory') {
-            const dirHandle = file.handle as FileSystemDirectoryHandle;
-            
-            // Check if move method is available  
-            if (typeof (dirHandle as any).move === 'function') {
-              await (dirHandle as any).move(file.suggestedName);
-            } else {
-              throw new Error('Move operation not supported by this browser');
-            }
-          }
+          const handle = file.handle;
           
-          results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
-          successful++;
+          // Check if the handle has the move method
+          if (typeof (handle as any).move === 'function') {
+            // Try to move the file/directory with the new name
+            await (handle as any).move(file.suggestedName);
+            results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
+            successful++;
+          } else {
+            // If move is not available, we need to use a different approach
+            // This is a fallback for when the move API is not yet implemented
+            throw new Error('File renaming not supported: File System Access API move() method is not available in this browser');
+          }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           results.push({ 
             success: false, 
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: errorMessage,
             file: file.originalName 
           });
           failed++;
@@ -330,8 +331,12 @@ export class FileList extends LitElement {
       if (failed === 0) {
         this.showMessage(`Successfully renamed ${successful} files!`, 'success');
         this.files = [];
+      } else if (successful > 0) {
+        this.showMessage(`Renamed ${successful} files, ${failed} failed. Check console for details.`, 'error');
+        console.warn('Rename failures:', results.filter(r => !r.success));
       } else {
-        this.showMessage(`Renamed ${successful} files, ${failed} failed.`, 'error');
+        this.showMessage(`Failed to rename files. ${failed} operations failed.`, 'error');
+        console.error('All rename operations failed:', results);
       }
     } catch (error) {
       console.error('Failed to rename files:', error);
