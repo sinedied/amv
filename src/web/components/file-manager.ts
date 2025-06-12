@@ -34,18 +34,17 @@ export class FileManager extends LitElement {
   static styles = css`
     .drop-zone {
       border: 1.5px dashed var(--border);
-      border-radius: 6px;
-      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      padding: 1rem;
       text-align: center;
       transition: all 0.2s;
-      cursor: pointer;
       background: var(--background);
-      min-height: 2.5em;
+      min-height: 80px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0.25em;
+      gap: 0.75rem;
     }
 
     .drop-zone:hover, .drop-zone.drag-over {
@@ -56,102 +55,158 @@ export class FileManager extends LitElement {
     .drop-zone p {
       margin: 0;
       color: var(--text-secondary);
-      font-size: 0.97em;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background-color: #4b5563;
+    }
+
+    .checkbox-group {
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .checkbox-group label {
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin: 0;
     }
   `;
 
   render() {
     return html`
-      <div class="form-group" style="margin-bottom:0;text-align:left;">
-        <label style="font-size:0.95em;cursor:pointer;">
+      <div class="checkbox-group">
+        <label>
           <input type="checkbox"
             .checked=${this.loadFilesInFolders}
             @change=${this.handleLoadFilesCheckbox}
-            style="margin-right:0.5em;vertical-align:middle;"
           />
           Load files in dropped folders (not folders themselves)
         </label>
       </div>
       <div class="drop-zone ${this.dragOver ? 'drag-over' : ''}"
-        @click=${this.handleClick}
         @dragover=${this.handleDragOver}
         @dragleave=${this.handleDragLeave}
         @drop=${this.handleDrop}
       >
-        <p>Drop files or folders here, or click to browse</p>
-        <button type="button" class="btn-primary">Browse Files</button>
+        <p>Drop files or folders here, or use the buttons below</p>
+        <div class="button-group">
+          <button type="button" class="btn-primary" @click=${this.addFiles}>
+            📄 Add Files
+          </button>
+          <button type="button" class="btn-secondary" @click=${this.addFolders}>
+            📁 Add Folders
+          </button>
+        </div>
       </div>
     `;
   }
 
-  private handleClick() {
-    // Only use File System Access API - no fallback
-    if ('showOpenFilePicker' in window) {
-      this.handleFileSystemPicker();
-    } else {
-      this.showUnsupportedBrowserError();
-    }
-  }
-
-  private async handleFileSystemPicker() {
+  private async addFiles() {
     try {
+      if (!('showOpenFilePicker' in window)) {
+        this.showUnsupportedBrowserError();
+        return;
+      }
+
       const options: any = {
         multiple: true,
         excludeAcceptAllOption: false
       };
 
-      let handles: FileSystemHandle[];
-      
-      if (this.loadFilesInFolders) {
-        // Pick directories
-        if ('showDirectoryPicker' in window) {
-          handles = [await (window as any).showDirectoryPicker()];
-        } else {
-          throw new Error('Directory picker not supported');
-        }
-      } else {
-        // Pick files
-        if ('showOpenFilePicker' in window) {
-          handles = await (window as any).showOpenFilePicker(options);
-        } else {
-          throw new Error('File picker not supported');
-        }
-      }
-
+      const fileHandles = await (window as any).showOpenFilePicker(options);
       const fileItems: FileItem[] = [];
       
-      for (const handle of handles) {
-        if (handle.kind === 'file') {
-          const fileHandle = handle as FileSystemFileHandle;
-          const file = await fileHandle.getFile();
-          fileItems.push({
-            path: file.name,
-            name: file.name,
-            isDirectory: false,
-            originalName: file.name,
-            handle: fileHandle
-          });
-        } else if (handle.kind === 'directory') {
-          const dirHandle = handle as FileSystemDirectoryHandle;
-          if (this.loadFilesInFolders) {
-            const dirItems = await this.processDirectoryHandle(dirHandle);
-            fileItems.push(...dirItems);
-          } else {
-            fileItems.push({
-              path: dirHandle.name,
-              name: dirHandle.name,
-              isDirectory: true,
-              originalName: dirHandle.name,
-              handle: dirHandle
-            });
-          }
-        }
+      for (const fileHandle of fileHandles) {
+        const file = await fileHandle.getFile();
+        fileItems.push({
+          path: file.name,
+          name: file.name,
+          isDirectory: false,
+          originalName: file.name,
+          handle: fileHandle
+        });
       }
       
       this.dispatchFileItems(fileItems);
     } catch (error) {
-      console.error('Error with file system picker:', error);
-      this.showUnsupportedBrowserError();
+      if ((error as any).name !== 'AbortError') {
+        console.error('Error selecting files:', error);
+        this.showUnsupportedBrowserError();
+      }
+    }
+  }
+
+  private async addFolders() {
+    try {
+      if (!('showDirectoryPicker' in window)) {
+        this.showUnsupportedBrowserError();
+        return;
+      }
+
+      const dirHandle = await (window as any).showDirectoryPicker();
+      const fileItems: FileItem[] = [];
+      
+      if (this.loadFilesInFolders) {
+        // Load all files within the directory
+        const dirItems = await this.processDirectoryHandle(dirHandle);
+        fileItems.push(...dirItems);
+      } else {
+        // Just add the directory itself
+        fileItems.push({
+          path: dirHandle.name,
+          name: dirHandle.name,
+          isDirectory: true,
+          originalName: dirHandle.name,
+          handle: dirHandle
+        });
+      }
+      
+      this.dispatchFileItems(fileItems);
+    } catch (error) {
+      if ((error as any).name !== 'AbortError') {
+        console.error('Error selecting folder:', error);
+        this.showUnsupportedBrowserError();
+      }
     }
   }
 
