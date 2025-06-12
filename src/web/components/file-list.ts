@@ -225,6 +225,18 @@ export class FileList extends LitElement {
 
   addFiles(newFiles: FileItem[]) {
     this.files = [...this.files, ...newFiles];
+    this.sortFiles();
+  }
+
+  private sortFiles() {
+    this.files = this.files.sort((a, b) => {
+      // Sort directories first, then files
+      if (a.isDirectory !== b.isDirectory) {
+        return a.isDirectory ? -1 : 1;
+      }
+      // Then sort alphabetically by original name (case-insensitive)
+      return a.originalName.toLowerCase().localeCompare(b.originalName.toLowerCase());
+    });
   }
 
   private async generateSuggestions() {
@@ -248,6 +260,7 @@ export class FileList extends LitElement {
         renameStatus: undefined,
         renameError: undefined
       }));
+      this.sortFiles();
 
       // Make one request per file for progressive updates
       const updatedFiles: FileItem[] = [...this.files];
@@ -459,6 +472,7 @@ export class FileList extends LitElement {
 
       // Update the files array with status information
       this.files = updatedFiles;
+      this.sortFiles();
 
       const collisionCount = collisionFiles.size;
       const totalProcessed = successful + failed;
