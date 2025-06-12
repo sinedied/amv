@@ -309,11 +309,72 @@ export class FileList extends LitElement {
     }
   }
 
+  private async checkForCollisions(): Promise<{ hasCollisions: boolean; errors: string[]; collisionFiles: Set<string> }> {
+    const errors: string[] = [];
+    const collisionFiles = new Set<string>();
+    const suggestedNames = new Map<string, { name: string; originalPath: string }[]>();
+
+    // Group files by parent directory path and check for duplicates within the batch
+    for (const file of this.files) {
+      if (!file.suggestedName || file.suggestedName === file.originalName) {
+        continue;
+      }
+
+      // Extract parent directory path
+      const parentPath = file.path.substring(0, file.path.lastIndexOf('/')) || '/';
+      
+      if (!suggestedNames.has(parentPath)) {
+        suggestedNames.set(parentPath, []);
+      }
+      
+      const filesInDirectory = suggestedNames.get(parentPath)!;
+      
+      // Check for duplicates within the batch
+      const duplicate = filesInDirectory.find(f => f.name === file.suggestedName);
+      if (duplicate) {
+        collisionFiles.add(file.path);
+        collisionFiles.add(duplicate.originalPath);
+        errors.push(`Naming collision: "${file.originalName}" and "${duplicate.originalPath.split('/').pop()}" would both be renamed to "${file.suggestedName}"`);
+      } else {
+        filesInDirectory.push({ name: file.suggestedName, originalPath: file.path });
+      }
+    }
+
+    // Additional check: try to detect if suggested names conflict with existing files
+    // This is best-effort since File System Access API has limitations
+    for (const file of this.files) {
+      if (!file.suggestedName || file.suggestedName === file.originalName || collisionFiles.has(file.path)) {
+        continue;
+      }
+
+      try {
+        // If we have a directory handle and we're in that directory context, we could check
+        // But the File System Access API doesn't provide easy parent directory access
+        // We'll add this check when renaming and catch the error there
+      } catch (error) {
+        // Ignore errors in collision detection, let the rename operation handle them
+      }
+    }
+
+    return {
+      hasCollisions: errors.length > 0,
+      errors,
+      collisionFiles
+    };
+  }
+
   private async renameFiles() {
     this.isLoading = true;
     this.clearMessage();
 
     try {
+      // Check for collisions and mark affected files, but continue with non-collision files
+      const { hasCollisions, errors, collisionFiles } = await this.checkForCollisions();
+      
+      if (hasCollisions) {
+        console.warn('Naming collisions detected:', errors);
+      }
+
       const results = [];
       let successful = 0;
       let failed = 0;
@@ -323,6 +384,18 @@ export class FileList extends LitElement {
 
       for (let i = 0; i < this.files.length; i++) {
         const file = this.files[i];
+        
+        // Skip files with collision errors
+        if (collisionFiles.has(file.path)) {
+          updatedFiles[i] = { 
+            ...file, 
+            renameStatus: 'error',
+            renameError: 'Naming collision detected - multiple files would have the same name'
+          };
+          results.push({ success: false, error: 'Naming collision detected', file: file.originalName });
+          failed++;
+          continue;
+        }
         
         if (!file.suggestedName || file.suggestedName === file.originalName) {
           updatedFiles[i] = { 
@@ -360,7 +433,16 @@ export class FileList extends LitElement {
             throw new Error('File renaming not supported: File System Access API move() method is not available in this browser');
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          let errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          // Check if this is a naming collision error
+          if (errorMessage.includes('already exists') || 
+              errorMessage.includes('collision') || 
+              errorMessage.includes('name is already in use') ||
+              error instanceof DOMException && error.name === 'InvalidModificationError') {
+            errorMessage = `Naming collision: A file or folder named "${file.suggestedName}" already exists`;
+          }
+          
           updatedFiles[i] = { 
             ...file, 
             renameStatus: 'error',
@@ -378,14 +460,30 @@ export class FileList extends LitElement {
       // Update the files array with status information
       this.files = updatedFiles;
 
-      if (failed === 0) {
+      const collisionCount = collisionFiles.size;
+      const totalProcessed = successful + failed;
+      
+      if (failed === 0 && collisionCount === 0) {
         this.showMessage(`Successfully renamed ${successful} files!`, 'success');
       } else if (successful > 0) {
-        this.showMessage(`Renamed ${successful} files, ${failed} failed. Check console for details.`, 'error');
+        const errorDetails = [];
+        if (collisionCount > 0) {
+          errorDetails.push(`${collisionCount} had naming collisions`);
+        }
+        if (failed - collisionCount > 0) {
+          errorDetails.push(`${failed - collisionCount} other failures`);
+        }
+        this.showMessage(`Renamed ${successful} files, ${failed} failed (${errorDetails.join(', ')}). Check console for details.`, 'error');
         console.warn('Rename failures:', results.filter(r => !r.success));
+        if (collisionCount > 0) {
+          console.warn('Collision errors:', errors);
+        }
       } else {
-        this.showMessage(`Failed to rename files. ${failed} operations failed.`, 'error');
+        this.showMessage(`Failed to rename files. ${failed} operations failed${collisionCount > 0 ? ` (${collisionCount} due to naming collisions)` : ''}.`, 'error');
         console.error('All rename operations failed:', results);
+        if (collisionCount > 0) {
+          console.error('Collision errors:', errors);
+        }
       }
     } catch (error) {
       console.error('Failed to rename files:', error);
