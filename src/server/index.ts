@@ -174,43 +174,6 @@ Example response format:
     }
   });
 
-  fastify.post<{ Body: { files: FileItem[] } }>('/api/rename-files', async (request, reply) => {
-    const { files } = request.body;
-
-    try {
-      const results = [];
-      
-      for (const file of files) {
-        if (!file.suggestedName || file.suggestedName === file.originalName) {
-          results.push({ success: false, error: 'No new name suggested', file: file.originalName });
-          continue;
-        }
-
-        try {
-          const oldPath = file.path;
-          const newPath = join(dirname(file.path), file.suggestedName);
-          
-          await fs.rename(oldPath, newPath);
-          results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
-        } catch (error) {
-          results.push({ 
-            success: false, 
-            error: error instanceof Error ? error.message : 'Unknown error',
-            file: file.originalName 
-          });
-        }
-      }
-
-      reply.send({ results });
-    } catch (error) {
-      console.error('Rename error:', error);
-      reply.status(500).send({ 
-        error: 'Failed to rename files',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
   // Health check
   fastify.get('/api/health', async () => {
     const azureConfigured = !!(process.env.AZURE_OPENAI_API_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);

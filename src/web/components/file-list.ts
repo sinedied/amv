@@ -225,13 +225,22 @@ export class FileList extends LitElement {
       for (let i = 0; i < this.files.length; i++) {
         const file = this.files[i];
         try {
+          // Create a serializable version of the file object (exclude handle)
+          const serializableFile = {
+            path: file.path,
+            name: file.name,
+            isDirectory: file.isDirectory,
+            originalName: file.originalName,
+            suggestedName: file.suggestedName
+          };
+
           const response = await fetch('/api/suggest-names', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              files: [file],
+              files: [serializableFile],
               rules,
               model
             })
@@ -252,8 +261,8 @@ export class FileList extends LitElement {
           }
 
           const result = await response.json();
-          // result.files is an array with one file
-          updatedFiles[i] = result.files[0];
+          // result.files is an array with one file - merge suggestion back with original file (including handle)
+          updatedFiles[i] = { ...file, suggestedName: result.files[0].suggestedName };
           this.files = [...updatedFiles]; // trigger UI update for progress
         } catch (error) {
           // If a single file fails, leave the suggested name undefined and continue
@@ -276,29 +285,58 @@ export class FileList extends LitElement {
     this.clearMessage();
 
     try {
-      const response = await fetch('/api/rename-files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          files: this.files
-        })
-      });
+      const results = [];
+      let successful = 0;
+      let failed = 0;
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      for (const file of this.files) {
+        if (!file.suggestedName || file.suggestedName === file.originalName) {
+          results.push({ success: false, error: 'No new name suggested', file: file.originalName });
+          failed++;
+          continue;
+        }
+
+        if (!file.handle) {
+          results.push({ success: false, error: 'File System Access API required - please re-add files using drag & drop or file picker', file: file.originalName });
+          failed++;
+          continue;
+        }
+
+        try {
+          // Use File System Access API to rename the file/directory
+          const handle = file.handle;
+          
+          // Check if the handle has the move method
+          if (typeof (handle as any).move === 'function') {
+            // Try to move the file/directory with the new name
+            await (handle as any).move(file.suggestedName);
+            results.push({ success: true, oldName: file.originalName, newName: file.suggestedName });
+            successful++;
+          } else {
+            // If move is not available, we need to use a different approach
+            // This is a fallback for when the move API is not yet implemented
+            throw new Error('File renaming not supported: File System Access API move() method is not available in this browser');
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          results.push({ 
+            success: false, 
+            error: errorMessage,
+            file: file.originalName 
+          });
+          failed++;
+        }
       }
-
-      const result = await response.json();
-      const successful = result.results.filter((r: any) => r.success).length;
-      const failed = result.results.filter((r: any) => !r.success).length;
 
       if (failed === 0) {
         this.showMessage(`Successfully renamed ${successful} files!`, 'success');
         this.files = [];
+      } else if (successful > 0) {
+        this.showMessage(`Renamed ${successful} files, ${failed} failed. Check console for details.`, 'error');
+        console.warn('Rename failures:', results.filter(r => !r.success));
       } else {
-        this.showMessage(`Renamed ${successful} files, ${failed} failed.`, 'error');
+        this.showMessage(`Failed to rename files. ${failed} operations failed.`, 'error');
+        console.error('All rename operations failed:', results);
       }
     } catch (error) {
       console.error('Failed to rename files:', error);

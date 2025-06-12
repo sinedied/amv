@@ -4,4 +4,5 @@ export interface FileItem {
   isDirectory: boolean;
   originalName: string;
   suggestedName?: string;
+  handle?: FileSystemFileHandle | FileSystemDirectoryHandle;
 }
