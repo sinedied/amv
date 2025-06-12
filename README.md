@@ -129,3 +129,7 @@ npm run type-check
 ## License
 
 MIT
+
+## Inspiration
+
+This project was inspired by [BulkRenameUtility](https://github.com/XXXiaofeng/BulkRenameUtility).
