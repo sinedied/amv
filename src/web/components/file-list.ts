@@ -28,10 +28,11 @@ export class FileList extends LitElement {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 1rem;
+      table-layout: fixed;
     }
 
     th, td {
-      padding: 0.5rem;
+      padding: 0.25rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
@@ -40,6 +41,15 @@ export class FileList extends LitElement {
       font-weight: 600;
       background-color: var(--background);
       color: var(--text-primary);
+    }
+
+    th:nth-child(1), td:nth-child(1) {
+      width: 5%;
+    }
+
+    th:nth-child(2), td:nth-child(2),
+    th:nth-child(3), td:nth-child(3) {
+      width: 47.5%;
     }
 
     tr:hover {
