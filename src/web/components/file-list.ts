@@ -201,15 +201,6 @@ export class FileList extends LitElement {
 
   addFiles(newFiles: FileItem[]) {
     this.files = [...this.files, ...newFiles];
-    
-    // Check if any files don't have handles and warn the user
-    const filesWithoutHandles = newFiles.filter(file => !file.handle);
-    if (filesWithoutHandles.length > 0) {
-      this.showMessage(
-        `Warning: ${filesWithoutHandles.length} file(s) were added without File System Access API support. Renaming may not work. Please use a modern browser and re-add files via drag & drop or file picker.`, 
-        'error'
-      );
-    }
   }
 
   private async generateSuggestions() {

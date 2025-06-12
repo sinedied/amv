@@ -15,10 +15,20 @@ function initApp() {
     }
   });
 
+  // Listen for error events from file-manager
+  document.addEventListener('show-error', (e) => {
+    const customEvent = e as CustomEvent;
+    const errorMessage = customEvent.detail;
+    
+    if (fileList) {
+      (fileList as any).showMessage(errorMessage, 'error');
+    }
+  });
+
   // Check server health on load
   checkServerHealth();
   
-  // Check File System Access API support
+  // Check File System Access API support and show error if not supported
   checkFileSystemAccessAPI();
 }
 
@@ -34,26 +44,22 @@ async function checkServerHealth() {
 
 function checkFileSystemAccessAPI() {
   const hasFileSystemAccess = 'showOpenFilePicker' in window && 'showDirectoryPicker' in window;
-  const hasDragDropSupport = typeof (DataTransferItem.prototype as any).getAsFileSystemHandle === 'function';
   
   if (!hasFileSystemAccess) {
-    console.warn('File System Access API not supported. Renaming functionality will be limited.');
+    console.error('File System Access API not supported. This application requires Chrome 86+ or Edge 86+.');
     
-    // Show a warning to users
+    // Show error to users immediately
     const fileList = document.querySelector('file-list');
     if (fileList) {
       setTimeout(() => {
         (fileList as any).showMessage(
-          'Your browser does not support the File System Access API. File renaming may not work. Please use Chrome 86+ or another modern browser.',
+          'This application requires a modern browser with File System Access API support (Chrome 86+ or Edge 86+). Please upgrade your browser to use this tool.',
           'error'
         );
-      }, 1000);
+      }, 500);
     }
   } else {
     console.log('File System Access API is supported!');
-    if (!hasDragDropSupport) {
-      console.warn('Drag & drop with File System Access API is not fully supported. Use file picker buttons for best results.');
-    }
   }
 }
 

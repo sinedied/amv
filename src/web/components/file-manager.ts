@@ -58,10 +58,6 @@ export class FileManager extends LitElement {
       color: var(--text-secondary);
       font-size: 0.97em;
     }
-
-    input[type="file"] {
-      display: none;
-    }
   `;
 
   render() {
@@ -84,25 +80,16 @@ export class FileManager extends LitElement {
       >
         <p>Drop files or folders here, or click to browse</p>
         <button type="button" class="btn-primary">Browse Files</button>
-        <input 
-          type="file" 
-          multiple 
-          webkitdirectory
-          @change=${this.handleFileInput}
-          id="fileInput"
-        >
       </div>
     `;
   }
 
   private handleClick() {
-    // Use File System Access API for file picking if available
+    // Only use File System Access API - no fallback
     if ('showOpenFilePicker' in window) {
       this.handleFileSystemPicker();
     } else {
-      // Fallback to traditional file input
-      const input = this.shadowRoot?.getElementById('fileInput') as HTMLInputElement;
-      input?.click();
+      this.showUnsupportedBrowserError();
     }
   }
 
@@ -164,9 +151,7 @@ export class FileManager extends LitElement {
       this.dispatchFileItems(fileItems);
     } catch (error) {
       console.error('Error with file system picker:', error);
-      // User probably cancelled, or API not supported
-      const input = this.shadowRoot?.getElementById('fileInput') as HTMLInputElement;
-      input?.click();
+      this.showUnsupportedBrowserError();
     }
   }
 
@@ -185,11 +170,10 @@ export class FileManager extends LitElement {
     const dt = e.dataTransfer;
     if (!dt) return;
 
-    let useFileSystemAccess = false;
     const fileItems: FileItem[] = [];
 
     try {
-      // Try File System Access API for drag & drop if available
+      // Only use File System Access API for drag & drop
       if (dt.items && dt.items.length > 0 && typeof (DataTransferItem.prototype as any).getAsFileSystemHandle === 'function') {
         
         for (let i = 0; i < dt.items.length; i++) {
@@ -199,7 +183,6 @@ export class FileManager extends LitElement {
             try {
               const handle = await item.getAsFileSystemHandle?.();
               if (handle) {
-                useFileSystemAccess = true;
                 
                 if (handle.kind === 'file') {
                   // Request permission for the file
@@ -244,20 +227,21 @@ export class FileManager extends LitElement {
             }
           }
         }
-      }
-      
-      // If we successfully got items with File System Access API, use them
-      if (useFileSystemAccess && fileItems.length > 0) {
-        this.dispatchFileItems(fileItems);
-        return;
+        
+        // Dispatch the items we were able to get
+        if (fileItems.length > 0) {
+          this.dispatchFileItems(fileItems);
+        } else {
+          this.showUnsupportedBrowserError();
+        }
+      } else {
+        // File System Access API not supported
+        this.showUnsupportedBrowserError();
       }
     } catch (error) {
-      console.warn('File System Access API drag & drop failed:', error);
+      console.error('File System Access API drag & drop failed:', error);
+      this.showUnsupportedBrowserError();
     }
-
-    // Fallback to legacy drag & drop
-    console.log('Using legacy drag & drop handling');
-    this.handleLegacyDrop(e);
   }
 
   // Process directory handle recursively
@@ -300,85 +284,6 @@ export class FileManager extends LitElement {
     return fileItems;
   }
 
-  // Fallback to legacy drag & drop
-  private async handleLegacyDrop(e: DragEvent) {
-    const dt = e.dataTransfer;
-    if (!dt) return;
-
-    // If the option is checked, recursively get all files in dropped folders
-    if (this.loadFilesInFolders && dt.items && dt.items.length > 0) {
-      const entries: any[] = [];
-      for (let i = 0; i < dt.items.length; i++) {
-        const item = dt.items[i];
-        if (typeof item.webkitGetAsEntry === 'function') {
-          const entry = item.webkitGetAsEntry();
-          if (entry) entries.push(entry);
-        }
-      }
-      const files: File[] = await this.getFilesFromEntries(entries);
-      this.processFiles(files);
-    } else {
-      // Fallback: just use the files array (may include folders as empty files)
-      const files = Array.from(dt.files || []);
-      this.processFiles(files);
-    }
-  }
-  private async getFilesFromEntries(entries: any[]): Promise<File[]> {
-    const files: File[] = [];
-    for (const entry of entries) {
-      if (entry.isFile) {
-        files.push(await this.getFileFromEntry(entry));
-      } else if (entry.isDirectory) {
-        files.push(...await this.readAllFilesInDirectory(entry));
-      }
-    }
-    return files;
-  }
-
-  private getFileFromEntry(entry: any): Promise<File> {
-    return new Promise((resolve, reject) => {
-      entry.file((file: File) => resolve(file), reject);
-    });
-  }
-
-  private readAllFilesInDirectory(directoryEntry: any): Promise<File[]> {
-    return new Promise((resolve, reject) => {
-      const dirReader = directoryEntry.createReader();
-      const entries: any[] = [];
-      const readEntries = () => {
-        dirReader.readEntries(async (results: any[]) => {
-          if (!results.length) {
-            // All entries read, now recurse
-            const files: File[] = [];
-            for (const entry of entries) {
-              if (entry.isFile) {
-                files.push(await this.getFileFromEntry(entry));
-              } else if (entry.isDirectory) {
-                files.push(...await this.readAllFilesInDirectory(entry));
-              }
-            }
-            resolve(files);
-          } else {
-            entries.push(...results);
-            readEntries();
-          }
-        }, reject);
-      };
-      readEntries();
-    });
-  }
-
-  private handleFileInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const files = Array.from(input.files || []);
-    if (this.loadFilesInFolders) {
-      const onlyFiles = files.filter(f => !(f.type === '' && f.size === 0));
-      this.processFiles(onlyFiles);
-    } else {
-      this.processFiles(files);
-    }
-  }
-
   private handleLoadFilesCheckbox(e: Event) {
     const target = e.target as HTMLInputElement;
     this.loadFilesInFolders = target.checked;
@@ -391,15 +296,10 @@ export class FileManager extends LitElement {
     }));
   }
 
-  private processFiles(files: File[]) {
-    const fileItems: FileItem[] = files.map(file => ({
-      path: file.webkitRelativePath || file.name,
-      name: file.name,
-      isDirectory: file.type === '' && file.size === 0,
-      originalName: file.name
-      // Note: no handle for legacy files - renaming won't work
+  private showUnsupportedBrowserError() {
+    this.dispatchEvent(new CustomEvent('show-error', {
+      detail: 'This application requires a modern browser with File System Access API support (Chrome 86+ or Edge 86+). Please use a supported browser.',
+      bubbles: true
     }));
-
-    this.dispatchFileItems(fileItems);
   }
 }
