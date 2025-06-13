@@ -17,6 +17,9 @@ export class FileList extends LitElement {
   @state()
   private messageType: 'success' | 'error' | '' = '';
 
+  @state()
+  private hasTriedGeneration = false;
+
   private abortController: AbortController | null = null;
 
   static styles = css`
@@ -133,6 +136,19 @@ export class FileList extends LitElement {
       padding: 0.25rem 0.5rem;
       font-size: 0.875rem;
       border-radius: 4px;
+    }
+
+    .btn-retry {
+      background-color: #f3f4f6;
+      color: #6b7280;
+      border: 1px solid #d1d5db;
+      padding: 0.125rem 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    .btn-retry:hover:not(:disabled) {
+      background-color: #e5e7eb;
+      color: #4b5563;
     }
 
     .loading-text {
@@ -256,13 +272,13 @@ export class FileList extends LitElement {
                     file.renameStatus === 'error' ? html`<span title="${file.renameError || 'Rename failed'}">❌</span>` : ''}
                 </td>
                 <td>
-                  ${(!file.suggestedName || file.renameStatus === 'error') && !file.isRetrying && !this.isLoading ? html`
+                  ${this.hasTriedGeneration && (!file.suggestedName || file.renameStatus === 'error') && !file.isRetrying && !this.isLoading ? html`
                     <button 
-                      class="btn-small btn-secondary"
+                      class="btn-retry"
                       @click=${() => this.retrySingleFile(index)}
                       title="Retry AI suggestion for this file"
                     >
-                      🔄 Retry
+                      🔄
                     </button>
                   ` : ''}
                 </td>
@@ -301,6 +317,7 @@ export class FileList extends LitElement {
     }
 
     this.isLoading = true;
+    this.hasTriedGeneration = true;
     this.clearMessage();
     
     // Create new AbortController for this operation
@@ -530,6 +547,7 @@ export class FileList extends LitElement {
 
   private async renameFiles() {
     this.isLoading = true;
+    this.hasTriedGeneration = false; // Reset retry buttons after rename button is hit
     this.clearMessage();
 
     try {
@@ -661,6 +679,7 @@ export class FileList extends LitElement {
 
   private clearFiles() {
     this.files = [];
+    this.hasTriedGeneration = false;
     this.clearMessage();
   }
 
