@@ -142,13 +142,15 @@ export class FileList extends LitElement {
       background-color: #f3f4f6;
       color: #6b7280;
       border: 1px solid #d1d5db;
-      padding: 0.125rem 0.25rem;
+      padding: 0.25rem 0.5rem;
       font-size: 0.75rem;
+      cursor: pointer;
     }
 
     .btn-retry:hover:not(:disabled) {
       background-color: #e5e7eb;
       color: #4b5563;
+      border-color: #9ca3af;
     }
 
     .loading-text {
@@ -272,13 +274,13 @@ export class FileList extends LitElement {
                     file.renameStatus === 'error' ? html`<span title="${file.renameError || 'Rename failed'}">❌</span>` : ''}
                 </td>
                 <td>
-                  ${this.hasTriedGeneration && (!file.suggestedName || file.renameStatus === 'error') && !file.isRetrying && !this.isLoading ? html`
+                  ${this.hasTriedGeneration && !file.isRetrying && !this.isLoading ? html`
                     <button 
                       class="btn-retry"
                       @click=${() => this.retrySingleFile(index)}
-                      title="Retry AI suggestion for this file"
+                      title="Regenerate AI suggestion for this file"
                     >
-                      🔄
+                      🔄 ReGen
                     </button>
                   ` : ''}
                 </td>
