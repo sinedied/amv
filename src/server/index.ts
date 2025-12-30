@@ -132,7 +132,6 @@ Example response format:
         // Retry up to 3 times
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            const isAzure = model.startsWith('azure:');
             const completionParams: any = {
               model: actualModel,
               messages: [
