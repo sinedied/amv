@@ -174,6 +174,52 @@ Example response format:
     }
   });
 
+  // Get list of available templates
+  fastify.get('/api/templates', async (request, reply) => {
+    try {
+      const templatesDir = join(process.cwd(), 'templates');
+      const files = await fs.readdir(templatesDir);
+      const templates = files
+        .filter(file => file.endsWith('.md'))
+        .map(file => ({
+          name: file.replace('.md', ''),
+          filename: file
+        }));
+      reply.send({ templates });
+    } catch (error) {
+      console.error('Error reading templates:', error);
+      reply.status(500).send({ 
+        error: 'Failed to load templates',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get template content by name
+  fastify.get<{ Params: { name: string } }>('/api/templates/:name', async (request, reply) => {
+    try {
+      const { name } = request.params;
+      const templatesDir = join(process.cwd(), 'templates');
+      const templatePath = join(templatesDir, `${name}.md`);
+      
+      // Security: ensure the path is within the templates directory
+      const normalizedPath = join(templatesDir, `${name}.md`);
+      if (!normalizedPath.startsWith(templatesDir)) {
+        reply.status(400).send({ error: 'Invalid template name' });
+        return;
+      }
+      
+      const content = await fs.readFile(templatePath, 'utf-8');
+      reply.send({ content });
+    } catch (error) {
+      console.error('Error reading template:', error);
+      reply.status(404).send({ 
+        error: 'Template not found',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Health check
   fastify.get('/api/health', async () => {
     const azureConfigured = !!(process.env.AZURE_OPENAI_API_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
