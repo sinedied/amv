@@ -17,6 +17,11 @@ export class FileList extends LitElement {
   @state()
   private messageType: 'success' | 'error' | '' = '';
 
+  @state()
+  private hasTriedGeneration = false;
+
+  private abortController: AbortController | null = null;
+
   static styles = css`
     .empty-state {
       text-align: center;
@@ -48,15 +53,20 @@ export class FileList extends LitElement {
     }
 
     th:nth-child(2), td:nth-child(2) {
-      width: 45%;
+      width: 35%;
     }
 
     th:nth-child(3), td:nth-child(3) {
-      width: 45%;
+      width: 35%;
     }
 
     th:nth-child(4), td:nth-child(4) {
       width: 5%;
+      text-align: center;
+    }
+
+    th:nth-child(5), td:nth-child(5) {
+      width: 10%;
       text-align: center;
     }
 
@@ -108,9 +118,44 @@ export class FileList extends LitElement {
       background-color: #059669;
     }
 
+    .btn-danger {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: #dc2626;
+    }
+
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    .btn-small {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      border-radius: 4px;
+    }
+
+    .btn-retry {
+      background-color: #f3f4f6;
+      color: #6b7280;
+      border: 1px solid #d1d5db;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .btn-retry:hover:not(:disabled) {
+      background-color: #e5e7eb;
+      color: #4b5563;
+      border-color: #9ca3af;
+    }
+
+    .loading-text {
+      color: var(--text-secondary);
+      font-style: italic;
     }
 
     .loading {
@@ -172,13 +217,21 @@ export class FileList extends LitElement {
         </div>
       ` : html`
         <div class="button-group">
-          <button 
-            class="btn-primary ${this.isLoading ? 'loading' : ''}"
-            @click=${this.generateSuggestions}
-            ?disabled=${this.isLoading}
-          >
-            ${this.isLoading ? 'Generating...' : 'Generate AI Suggestions'}
-          </button>
+          ${this.isLoading ? html`
+            <button 
+              class="btn-danger"
+              @click=${this.cancelSuggestions}
+            >
+              Cancel Generation
+            </button>
+          ` : html`
+            <button 
+              class="btn-primary"
+              @click=${this.generateSuggestions}
+            >
+              Generate AI Suggestions
+            </button>
+          `}
           <button 
             class="btn-success"
             @click=${this.renameFiles}
@@ -202,18 +255,34 @@ export class FileList extends LitElement {
               <th>Original Name</th>
               <th>Suggested Name</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            ${this.files.map(file => html`
+            ${this.files.map((file, index) => html`
               <tr>
                 <td>${file.isDirectory ? '📁' : '📄'}</td>
                 <td>${file.originalName}</td>
-                <td>${file.suggestedName || '-'}</td>
+                <td>
+                  ${file.isRetrying ? html`
+                    <span class="loading-text">Generating...</span>
+                  ` : file.suggestedName || '-'}
+                </td>
                 <td>
                   ${file.renameStatus === 'success' ? html`<span title="Successfully renamed">✅</span>` : 
                     file.renameStatus === 'warning' ? html`<span title="Same name">⚠️</span>` :
                     file.renameStatus === 'error' ? html`<span title="${file.renameError || 'Rename failed'}">❌</span>` : ''}
+                </td>
+                <td>
+                  ${this.hasTriedGeneration && !file.isRetrying && !this.isLoading ? html`
+                    <button 
+                      class="btn-retry"
+                      @click=${() => this.retrySingleFile(index)}
+                      title="Regenerate AI suggestion for this file"
+                    >
+                      🔄 ReGen
+                    </button>
+                  ` : ''}
                 </td>
               </tr>
             `)}
@@ -250,7 +319,11 @@ export class FileList extends LitElement {
     }
 
     this.isLoading = true;
+    this.hasTriedGeneration = true;
     this.clearMessage();
+    
+    // Create new AbortController for this operation
+    this.abortController = new AbortController();
 
     try {
       // Clear existing suggestions and status before generating new ones
@@ -258,13 +331,20 @@ export class FileList extends LitElement {
         ...file, 
         suggestedName: undefined,
         renameStatus: undefined,
-        renameError: undefined
+        renameError: undefined,
+        isRetrying: false
       }));
       this.sortFiles();
 
       // Make one request per file for progressive updates
       const updatedFiles: FileItem[] = [...this.files];
       for (let i = 0; i < this.files.length; i++) {
+        // Check if operation was cancelled
+        if (this.abortController.signal.aborted) {
+          this.showMessage('AI suggestions generation was cancelled.', 'error');
+          return;
+        }
+
         const file = this.files[i];
         try {
           // Create a serializable version of the file object (exclude handle)
@@ -285,7 +365,8 @@ export class FileList extends LitElement {
               files: [serializableFile],
               rules,
               model
-            })
+            }),
+            signal: this.abortController.signal
           });
 
           if (!response.ok) {
@@ -307,6 +388,11 @@ export class FileList extends LitElement {
           updatedFiles[i] = { ...file, suggestedName: result.files[0].suggestedName };
           this.files = [...updatedFiles]; // trigger UI update for progress
         } catch (error) {
+          // Check if this was due to cancellation
+          if (error instanceof Error && error.name === 'AbortError') {
+            this.showMessage('AI suggestions generation was cancelled.', 'error');
+            return;
+          }
           // If a single file fails, leave the suggested name undefined and continue
           console.warn(`Failed to get suggestion for file ${file.originalName}:`, error);
           updatedFiles[i] = { ...file, suggestedName: undefined };
@@ -315,10 +401,95 @@ export class FileList extends LitElement {
       }
       this.showMessage('AI suggestions generated successfully!', 'success');
     } catch (error) {
-      console.error('Failed to generate suggestions:', error);
-      this.showMessage(`Failed to generate suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      if (error instanceof Error && error.name === 'AbortError') {
+        this.showMessage('AI suggestions generation was cancelled.', 'error');
+      } else {
+        console.error('Failed to generate suggestions:', error);
+        this.showMessage(`Failed to generate suggestions: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
     } finally {
       this.isLoading = false;
+      this.abortController = null;
+    }
+  }
+
+  private cancelSuggestions() {
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+  }
+
+  private async retrySingleFile(fileIndex: number) {
+    const rulesManager = document.querySelector('rules-manager') as RulesManager;
+    const rules = rulesManager?.getRules() || '';
+    const model = rulesManager?.getModel() || 'gemma3';
+
+    if (!rules.trim()) {
+      this.showMessage('Please enter some renaming rules first.', 'error');
+      return;
+    }
+
+    const file = this.files[fileIndex];
+    if (!file) return;
+
+    // Set retry state for this specific file
+    this.files = this.files.map((f, i) => 
+      i === fileIndex ? { ...f, isRetrying: true, suggestedName: undefined, renameStatus: undefined, renameError: undefined } : f
+    );
+
+    try {
+      // Create a serializable version of the file object (exclude handle)
+      const serializableFile = {
+        path: file.path,
+        name: file.name,
+        isDirectory: file.isDirectory,
+        originalName: file.originalName,
+        suggestedName: undefined
+      };
+
+      const response = await fetch('/api/suggest-names', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          files: [serializableFile],
+          rules,
+          model
+        })
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+            if (errorData.details) {
+              errorMessage += ` - ${errorData.details}`;
+            }
+          }
+        } catch {}
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      
+      // Update only this specific file
+      this.files = this.files.map((f, i) => 
+        i === fileIndex ? { ...f, isRetrying: false, suggestedName: result.files[0].suggestedName } : f
+      );
+      
+      this.showMessage(`AI suggestion generated for "${file.originalName}"!`, 'success');
+    } catch (error) {
+      console.warn(`Failed to get suggestion for file ${file.originalName}:`, error);
+      
+      // Update this specific file with error state
+      this.files = this.files.map((f, i) => 
+        i === fileIndex ? { ...f, isRetrying: false, suggestedName: undefined } : f
+      );
+      
+      this.showMessage(`Failed to generate suggestion for "${file.originalName}": ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   }
 
@@ -378,6 +549,7 @@ export class FileList extends LitElement {
 
   private async renameFiles() {
     this.isLoading = true;
+    this.hasTriedGeneration = false; // Reset retry buttons after rename button is hit
     this.clearMessage();
 
     try {
@@ -509,6 +681,7 @@ export class FileList extends LitElement {
 
   private clearFiles() {
     this.files = [];
+    this.hasTriedGeneration = false;
     this.clearMessage();
   }
 

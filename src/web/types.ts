@@ -7,4 +7,5 @@ export interface FileItem {
   handle?: FileSystemFileHandle | FileSystemDirectoryHandle;
   renameStatus?: 'success' | 'warning' | 'error';
   renameError?: string;
+  isRetrying?: boolean;
 }
