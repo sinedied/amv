@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { promises as fs } from 'node:fs';
 import { OpenAI } from 'openai';
 
@@ -199,12 +199,11 @@ Example response format:
   fastify.get<{ Params: { name: string } }>('/api/templates/:name', async (request, reply) => {
     try {
       const { name } = request.params;
-      const templatesDir = join(process.cwd(), 'templates');
-      const templatePath = join(templatesDir, `${name}.md`);
+      const templatesDir = resolve(process.cwd(), 'templates');
+      const templatePath = resolve(templatesDir, `${name}.md`);
       
-      // Security: ensure the path is within the templates directory
-      const normalizedPath = join(templatesDir, `${name}.md`);
-      if (!normalizedPath.startsWith(templatesDir)) {
+      // Security: ensure the resolved path is within the templates directory
+      if (!templatePath.startsWith(templatesDir + '/') && templatePath !== templatesDir) {
         reply.status(400).send({ error: 'Invalid template name' });
         return;
       }
