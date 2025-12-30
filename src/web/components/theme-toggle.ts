@@ -50,7 +50,7 @@ export class ThemeToggle extends LitElement {
 
     button:hover {
       color: var(--text-primary);
-      background: rgba(0, 0, 0, 0.05);
+      background: var(--background);
     }
 
     button.active {
