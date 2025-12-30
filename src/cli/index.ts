@@ -26,7 +26,7 @@ export function cli(args: string[]) {
     .description('Quick AI Renamer - AI-powered bulk file and folder renaming tool')
     .version('1.0.0')
     .option('-p, --port <port>', 'Port to run the server on', '4343')
-    .option('-m, --model <model>', 'AI model to use (default: ministral-3, supports azure:deployment-name)', 'ministral-3')
+    .option('-m, --model <model>', 'AI model to use (default: ministral-3, supports azure:deployment-name, openai:model-name)', 'ministral-3')
     .option('--no-open', 'Do not open browser automatically')
     .action(async (options) => {
       const port = parseInt(options.port);
