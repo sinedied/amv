@@ -7,7 +7,7 @@ export class RulesManager extends LitElement {
   private rules = '';
 
   @state()
-  private model = 'gemma3';
+  private model = 'ministral-3';
 
   static styles = css`
     label {
@@ -65,10 +65,10 @@ export class RulesManager extends LitElement {
           type="text"
           .value=${this.model}
           @input=${this.handleModelChange}
-          placeholder="gemma3, llama3, azure:gpt-4o, etc."
+          placeholder="ministral-3, llama3, azure:gpt-4o, etc."
         />
         <small class="help-text">
-          Use Ollama models (e.g., gemma3, llama3) or Azure OpenAI with "azure:" prefix (e.g., azure:gpt-4o, azure:gpt-4o-mini)
+          Use Ollama models (e.g., ministral-3, llama3) or Azure OpenAI with "azure:" prefix (e.g., azure:gpt-4o, azure:gpt-4o-mini)
         </small>
       </div>
       <div class="form-group">
