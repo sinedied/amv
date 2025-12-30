@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { promises as fs } from 'node:fs';
 import { OpenAI } from 'openai';
 
@@ -169,6 +169,51 @@ Example response format:
       console.error('AI suggestion error:', error);
       reply.status(500).send({ 
         error: 'Failed to generate suggestions',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get list of available templates
+  fastify.get('/api/templates', async (request, reply) => {
+    try {
+      const templatesDir = join(process.cwd(), 'templates');
+      const files = await fs.readdir(templatesDir);
+      const templates = files
+        .filter(file => file.endsWith('.md'))
+        .map(file => ({
+          name: file.replace('.md', ''),
+          filename: file
+        }));
+      reply.send({ templates });
+    } catch (error) {
+      console.error('Error reading templates:', error);
+      reply.status(500).send({ 
+        error: 'Failed to load templates',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get template content by name
+  fastify.get<{ Params: { name: string } }>('/api/templates/:name', async (request, reply) => {
+    try {
+      const { name } = request.params;
+      const templatesDir = resolve(process.cwd(), 'templates');
+      const templatePath = resolve(templatesDir, `${name}.md`);
+      
+      // Security: ensure the resolved path is within the templates directory
+      if (!templatePath.startsWith(templatesDir + '/') && templatePath !== templatesDir) {
+        reply.status(400).send({ error: 'Invalid template name' });
+        return;
+      }
+      
+      const content = await fs.readFile(templatePath, 'utf-8');
+      reply.send({ content });
+    } catch (error) {
+      console.error('Error reading template:', error);
+      reply.status(404).send({ 
+        error: 'Template not found',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

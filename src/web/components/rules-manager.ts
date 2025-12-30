@@ -1,6 +1,11 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 
+interface Template {
+  name: string;
+  filename: string;
+}
+
 @customElement('rules-manager')
 export class RulesManager extends LitElement {
   @state()
@@ -8,6 +13,12 @@ export class RulesManager extends LitElement {
 
   @state()
   private model = 'ministral-3';
+
+  @state()
+  private templates: Template[] = [];
+
+  @state()
+  private selectedTemplate = '';
 
   static styles = css`
     label {
@@ -17,11 +28,23 @@ export class RulesManager extends LitElement {
       color: var(--text-primary);
     }
 
+    .label-with-dropdown {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .label-with-dropdown label {
+      margin-bottom: 0;
+    }
+
     .form-group {
       margin-bottom: 0.75rem;
     }
 
-    textarea, input {
+    textarea, input, select {
       width: 100%;
       padding: 0.75rem;
       border: 1px solid var(--border);
@@ -31,12 +54,19 @@ export class RulesManager extends LitElement {
       box-sizing: border-box;
     }
 
+    select {
+      background-color: white;
+      cursor: pointer;
+      width: auto;
+      min-width: 200px;
+    }
+
     textarea {
       resize: vertical;
       min-height: 120px;
     }
 
-    textarea:focus, input:focus {
+    textarea:focus, input:focus, select:focus {
       outline: none;
       border-color: var(--primary-color);
       box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
@@ -54,6 +84,7 @@ export class RulesManager extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadData();
+    this.loadTemplates();
   }
 
   render() {
@@ -72,7 +103,19 @@ export class RulesManager extends LitElement {
         </small>
       </div>
       <div class="form-group">
-        <label for="rules">Renaming Rules</label>
+        <div class="label-with-dropdown">
+          <label for="rules">Renaming Rules</label>
+          <select
+            id="template-select"
+            .value=${this.selectedTemplate}
+            @change=${this.handleTemplateChange}
+          >
+            <option value="">Select a template...</option>
+            ${this.templates.map(template => html`
+              <option value="${template.name}">${template.name}</option>
+            `)}
+          </select>
+        </div>
         <textarea
           id="rules"
           .value=${this.rules}
@@ -128,5 +171,42 @@ export class RulesManager extends LitElement {
 
   getModel() {
     return this.model;
+  }
+
+  private async loadTemplates() {
+    try {
+      const response = await fetch('/api/templates');
+      const data = await response.json();
+      this.templates = data.templates || [];
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+      this.templates = [];
+    }
+  }
+
+  private async handleTemplateChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    this.selectedTemplate = target.value;
+    
+    if (!this.selectedTemplate) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/templates/${this.selectedTemplate}`);
+      const data = await response.json();
+      
+      if (data.content) {
+        this.rules = data.content;
+        this.saveData();
+        
+        this.dispatchEvent(new CustomEvent('rules-changed', {
+          detail: this.rules,
+          bubbles: true
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load template content:', error);
+    }
   }
 }
