@@ -49,7 +49,7 @@ export class FileManager extends LitElement {
 
     .drop-zone:hover, .drop-zone.drag-over {
       border-color: var(--primary-color);
-      background-color: rgb(79 70 229 / 0.05);
+      background-color: var(--hover-overlay);
     }
 
     .drop-zone p {
@@ -91,7 +91,7 @@ export class FileManager extends LitElement {
     }
 
     .btn-secondary:hover {
-      background-color: #4b5563;
+      background-color: var(--secondary-hover);
     }
 
     .checkbox-group {

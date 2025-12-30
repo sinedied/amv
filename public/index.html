@@ -9,13 +9,16 @@
       --primary-color: #4f46e5;
       --primary-hover: #3730a3;
       --secondary-color: #6b7280;
+      --secondary-hover: #4b5563;
       --background: #f8fafc;
       --surface: #ffffff;
       --text-primary: #111827;
       --text-secondary: #6b7280;
       --border: #e5e7eb;
       --success: #10b981;
+      --success-hover: #059669;
       --danger: #ef4444;
+      --danger-hover: #dc2626;
       --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
       --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
       
@@ -26,19 +29,27 @@
       --status-error-bg: #fef2f2;
       --status-error-border: #fecaca;
       --status-error-text: #dc2626;
+      
+      /* Hover and interaction colors */
+      --hover-overlay: rgba(79, 70, 229, 0.05);
+      --loading-shimmer: rgba(255, 255, 255, 0.3);
+      --focus-ring: rgba(79, 70, 229, 0.1);
     }
 
     [data-theme="dark"] {
       --primary-color: #6366f1;
       --primary-hover: #4f46e5;
       --secondary-color: #9ca3af;
+      --secondary-hover: #6b7280;
       --background: #111827;
       --surface: #1f2937;
       --text-primary: #f9fafb;
       --text-secondary: #9ca3af;
       --border: #374151;
       --success: #10b981;
+      --success-hover: #059669;
       --danger: #ef4444;
+      --danger-hover: #dc2626;
       --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
       --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
       
@@ -49,6 +60,11 @@
       --status-error-bg: #7f1d1d;
       --status-error-border: #ef4444;
       --status-error-text: #fca5a5;
+      
+      /* Hover and interaction colors for dark mode */
+      --hover-overlay: rgba(99, 102, 241, 0.1);
+      --loading-shimmer: rgba(255, 255, 255, 0.1);
+      --focus-ring: rgba(99, 102, 241, 0.2);
     }
 
     * {
@@ -129,7 +145,7 @@
     textarea:focus, input[type="file"]:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
+      box-shadow: 0 0 0 3px var(--focus-ring);
     }
 
     textarea {
@@ -171,7 +187,7 @@
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background-color: #4b5563;
+      background-color: var(--secondary-hover);
     }
 
     .btn-danger {
@@ -180,7 +196,7 @@
     }
 
     .btn-danger:hover:not(:disabled) {
-      background-color: #dc2626;
+      background-color: var(--danger-hover);
     }
 
     .btn-success {
@@ -189,7 +205,7 @@
     }
 
     .btn-success:hover:not(:disabled) {
-      background-color: #059669;
+      background-color: var(--success-hover);
     }
 
     button:disabled {
@@ -212,7 +228,7 @@
       background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.3),
+        var(--loading-shimmer),
         transparent
       );
       animation: loading 1.5s infinite;

@@ -106,7 +106,7 @@ export class FileList extends LitElement {
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background-color: #4b5563;
+      background-color: var(--secondary-hover);
     }
 
     .btn-success {
@@ -115,7 +115,7 @@ export class FileList extends LitElement {
     }
 
     .btn-success:hover:not(:disabled) {
-      background-color: #059669;
+      background-color: var(--success-hover);
     }
 
     .btn-danger {
@@ -124,7 +124,7 @@ export class FileList extends LitElement {
     }
 
     .btn-danger:hover:not(:disabled) {
-      background-color: #dc2626;
+      background-color: var(--danger-hover);
     }
 
     button:disabled {
@@ -173,7 +173,7 @@ export class FileList extends LitElement {
       background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.3),
+        var(--loading-shimmer),
         transparent
       );
       animation: loading 1.5s infinite;

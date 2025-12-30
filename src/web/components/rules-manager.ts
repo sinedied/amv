@@ -41,7 +41,7 @@ export class RulesManager extends LitElement {
     textarea:focus, input:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
+      box-shadow: 0 0 0 3px var(--focus-ring);
     }
 
     .help-text {
