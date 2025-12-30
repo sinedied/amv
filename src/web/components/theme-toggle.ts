@@ -8,6 +8,8 @@ export class ThemeToggle extends LitElement {
   @state()
   private currentTheme: ThemeMode = 'system';
 
+  private mediaQueryListener: ((e: MediaQueryListEvent) => void) | undefined;
+
   static styles = css`
     .theme-toggle {
       display: flex;
@@ -79,6 +81,14 @@ export class ThemeToggle extends LitElement {
     this.applyTheme();
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    // Remove media query listener when component is destroyed
+    if (this.mediaQueryListener) {
+      window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.mediaQueryListener);
+    }
+  }
+
   render() {
     return html`
       <div class="theme-toggle">
@@ -133,13 +143,25 @@ export class ThemeToggle extends LitElement {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
       
-      // Listen for system theme changes
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      // Remove old listener if it exists
+      if (this.mediaQueryListener) {
+        window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.mediaQueryListener);
+      }
+      
+      // Create and store new listener for system theme changes
+      this.mediaQueryListener = (e: MediaQueryListEvent) => {
         if (this.currentTheme === 'system') {
           root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
         }
-      });
+      };
+      
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', this.mediaQueryListener);
     } else {
+      // Remove listener when not using system theme
+      if (this.mediaQueryListener) {
+        window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.mediaQueryListener);
+        this.mediaQueryListener = undefined;
+      }
       root.setAttribute('data-theme', this.currentTheme);
     }
   }
