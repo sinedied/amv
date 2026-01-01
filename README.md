@@ -125,13 +125,13 @@ Optionally, set `OPENAI_BASE_URL` to use a custom API endpoint (e.g., for OpenAI
 
 ```bash
 # Linux/macOS
-export OPENAI_BASE_URL="https://api.openai.com/v1"
+export OPENAI_BASE_URL="https://your-proxy.example.com/v1"
 
 # Windows (PowerShell)
-$env:OPENAI_BASE_URL="https://api.openai.com/v1"
+$env:OPENAI_BASE_URL="https://your-proxy.example.com/v1"
 
 # Or use a .env file
-echo "OPENAI_BASE_URL=https://api.openai.com/v1" >> .env
+echo "OPENAI_BASE_URL=https://your-proxy.example.com/v1" >> .env
 ```
 
 Then use OpenAI models with the `openai:` prefix:
