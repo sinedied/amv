@@ -9,15 +9,62 @@
       --primary-color: #4f46e5;
       --primary-hover: #3730a3;
       --secondary-color: #6b7280;
+      --secondary-hover: #4b5563;
       --background: #f8fafc;
       --surface: #ffffff;
       --text-primary: #111827;
       --text-secondary: #6b7280;
       --border: #e5e7eb;
       --success: #10b981;
+      --success-hover: #059669;
       --danger: #ef4444;
+      --danger-hover: #dc2626;
       --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
       --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      
+      /* Status message colors */
+      --status-success-bg: #f0fdf4;
+      --status-success-border: #bbf7d0;
+      --status-success-text: #15803d;
+      --status-error-bg: #fef2f2;
+      --status-error-border: #fecaca;
+      --status-error-text: #dc2626;
+      
+      /* Hover and interaction colors */
+      --hover-overlay: rgba(79, 70, 229, 0.05);
+      --loading-shimmer: rgba(255, 255, 255, 0.3);
+      --focus-ring: rgba(79, 70, 229, 0.1);
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --secondary-color: #9ca3af;
+      --secondary-hover: #6b7280;
+      --background: #111827;
+      --surface: #1f2937;
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --border: #374151;
+      --success: #10b981;
+      --success-hover: #059669;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+      
+      /* Status message colors for dark mode */
+      --status-success-bg: #064e3b;
+      --status-success-border: #10b981;
+      --status-success-text: #6ee7b7;
+      --status-error-bg: #7f1d1d;
+      --status-error-border: #ef4444;
+      --status-error-text: #fca5a5;
+      
+      /* Hover and interaction colors for dark mode */
+      --hover-overlay: rgba(99, 102, 241, 0.1);
+      --loading-shimmer: rgba(255, 255, 255, 0.1);
+      --focus-ring: rgba(99, 102, 241, 0.2);
     }
 
     * {
@@ -91,12 +138,14 @@
       border-radius: 6px;
       font-size: 0.95rem;
       transition: border-color 0.2s;
+      background-color: var(--surface);
+      color: var(--text-primary);
     }
 
     textarea:focus, input[type="file"]:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
+      box-shadow: 0 0 0 3px var(--focus-ring);
     }
 
     textarea {
@@ -138,7 +187,7 @@
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background-color: #4b5563;
+      background-color: var(--secondary-hover);
     }
 
     .btn-danger {
@@ -147,7 +196,7 @@
     }
 
     .btn-danger:hover:not(:disabled) {
-      background-color: #dc2626;
+      background-color: var(--danger-hover);
     }
 
     .btn-success {
@@ -156,7 +205,7 @@
     }
 
     .btn-success:hover:not(:disabled) {
-      background-color: #059669;
+      background-color: var(--success-hover);
     }
 
     button:disabled {
@@ -179,7 +228,7 @@
       background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.3),
+        var(--loading-shimmer),
         transparent
       );
       animation: loading 1.5s infinite;
@@ -235,15 +284,15 @@
     }
 
     .status-success {
-      background-color: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      color: #15803d;
+      background-color: var(--status-success-bg);
+      border: 1px solid var(--status-success-border);
+      color: var(--status-success-text);
     }
 
     .status-error {
-      background-color: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
+      background-color: var(--status-error-bg);
+      border: 1px solid var(--status-error-border);
+      color: var(--status-error-text);
     }
 
     @media (max-width: 768px) {
@@ -261,6 +310,10 @@
       
       th, td {
         padding: 0.5rem;
+      }
+
+      h1 {
+        font-size: 2rem;
       }
     }
     .flex-row {
@@ -285,7 +338,10 @@
 </head>
 <body>
   <div class="container">
-    <h1>amv <span style="font-weight:400;font-size:1rem;color:var(--text-secondary);">Quick AI Renamer</span></h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h1 style="margin:0;">amv <span style="font-weight:400;font-size:1rem;color:var(--text-secondary);">Quick AI Renamer</span></h1>
+      <theme-toggle></theme-toggle>
+    </div>
 
     <div class="flex-row">
       <div class="card card-half">

@@ -106,7 +106,7 @@ export class FileList extends LitElement {
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background-color: #4b5563;
+      background-color: var(--secondary-hover);
     }
 
     .btn-success {
@@ -115,7 +115,7 @@ export class FileList extends LitElement {
     }
 
     .btn-success:hover:not(:disabled) {
-      background-color: #059669;
+      background-color: var(--success-hover);
     }
 
     .btn-danger {
@@ -124,7 +124,7 @@ export class FileList extends LitElement {
     }
 
     .btn-danger:hover:not(:disabled) {
-      background-color: #dc2626;
+      background-color: var(--danger-hover);
     }
 
     button:disabled {
@@ -139,18 +139,18 @@ export class FileList extends LitElement {
     }
 
     .btn-retry {
-      background-color: #f3f4f6;
-      color: #6b7280;
-      border: 1px solid #d1d5db;
+      background-color: var(--surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
       padding: 0.25rem 0.5rem;
       font-size: 0.75rem;
       cursor: pointer;
     }
 
     .btn-retry:hover:not(:disabled) {
-      background-color: #e5e7eb;
-      color: #4b5563;
-      border-color: #9ca3af;
+      background-color: var(--background);
+      color: var(--text-primary);
+      border-color: var(--secondary-color);
     }
 
     .loading-text {
@@ -173,7 +173,7 @@ export class FileList extends LitElement {
       background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.3),
+        var(--loading-shimmer),
         transparent
       );
       animation: loading 1.5s infinite;
@@ -191,15 +191,15 @@ export class FileList extends LitElement {
     }
 
     .status-success {
-      background-color: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      color: #15803d;
+      background-color: var(--status-success-bg);
+      border: 1px solid var(--status-success-border);
+      color: var(--status-success-text);
     }
 
     .status-error {
-      background-color: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
+      background-color: var(--status-error-bg);
+      border: 1px solid var(--status-error-border);
+      color: var(--status-error-text);
     }
   `;
 

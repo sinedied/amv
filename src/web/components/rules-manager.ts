@@ -52,6 +52,8 @@ export class RulesManager extends LitElement {
       font-size: 1rem;
       transition: border-color 0.2s;
       box-sizing: border-box;
+      background-color: var(--surface);
+      color: var(--text-primary);
     }
 
     select {
@@ -69,7 +71,7 @@ export class RulesManager extends LitElement {
     textarea:focus, input:focus, select:focus {
       outline: none;
       border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgb(79 70 229 / 0.1);
+      box-shadow: 0 0 0 3px var(--focus-ring);
     }
 
     .help-text {
