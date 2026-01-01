@@ -20,6 +20,12 @@ export class RulesManager extends LitElement {
   @state()
   private selectedTemplate = '';
 
+  @state()
+  private ollamaModels: string[] = [];
+
+  @state()
+  private isOllamaAvailable = false;
+
   static styles = css`
     label {
       display: block;
@@ -62,6 +68,11 @@ export class RulesManager extends LitElement {
       min-width: 200px;
     }
 
+    select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     textarea {
       resize: vertical;
       min-height: 120px;
@@ -86,12 +97,27 @@ export class RulesManager extends LitElement {
     super.connectedCallback();
     this.loadData();
     this.loadTemplates();
+    this.loadOllamaModels();
   }
 
   render() {
     return html`
       <div class="form-group">
-        <label for="model">AI Model</label>
+        <div class="label-with-dropdown">
+          <label for="model">AI Model</label>
+          <select
+            id="model-select"
+            .value=${this.getOllamaModelFromInput()}
+            @change=${this.handleModelSelectChange}
+            ?disabled=${!this.isOllamaAvailable || this.ollamaModels.length === 0}
+            title=${!this.isOllamaAvailable ? 'Ollama not available' : this.ollamaModels.length === 0 ? 'No models available' : 'Select an Ollama model'}
+          >
+            <option value="">Select Ollama model...</option>
+            ${this.ollamaModels.map(model => html`
+              <option value="${model}">${model}</option>
+            `)}
+          </select>
+        </div>
         <input
           id="model"
           type="text"
@@ -208,6 +234,48 @@ export class RulesManager extends LitElement {
       }
     } catch (error) {
       console.error('Failed to load template content:', error);
+    }
+  }
+
+  private async loadOllamaModels() {
+    try {
+      const response = await fetch('/api/ollama/models');
+      const data = await response.json();
+      
+      if (response.ok && data.models && data.models.length > 0) {
+        this.ollamaModels = data.models;
+        this.isOllamaAvailable = true;
+      } else {
+        this.ollamaModels = [];
+        this.isOllamaAvailable = false;
+      }
+    } catch (error) {
+      console.error('Failed to load Ollama models:', error);
+      this.ollamaModels = [];
+      this.isOllamaAvailable = false;
+    }
+  }
+
+  private getOllamaModelFromInput(): string {
+    // If the current model doesn't have a prefix (azure: or openai:), it's an Ollama model
+    if (!this.model.startsWith('azure:') && !this.model.startsWith('openai:')) {
+      return this.model;
+    }
+    return '';
+  }
+
+  private handleModelSelectChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    const selectedModel = target.value;
+    
+    if (selectedModel) {
+      this.model = selectedModel;
+      this.saveData();
+      
+      this.dispatchEvent(new CustomEvent('model-changed', {
+        detail: this.model,
+        bubbles: true
+      }));
     }
   }
 }

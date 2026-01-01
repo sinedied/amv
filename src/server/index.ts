@@ -248,6 +248,33 @@ Example response format:
     }
   });
 
+  // Get available Ollama models
+  fastify.get('/api/ollama/models', async (request, reply) => {
+    try {
+      // Call Ollama API to get list of available models
+      const response = await fetch('http://localhost:11434/api/tags');
+      
+      if (!response.ok) {
+        reply.status(503).send({ 
+          error: 'Ollama not available',
+          models: []
+        });
+        return;
+      }
+      
+      const data = await response.json() as { models?: Array<{ name: string; modified_at: string; size: number }> };
+      const models = (data.models || []).map(m => m.name);
+      
+      reply.send({ models });
+    } catch (error) {
+      console.error('Failed to fetch Ollama models:', error);
+      reply.status(503).send({ 
+        error: 'Ollama not available',
+        models: []
+      });
+    }
+  });
+
   // Health check
   fastify.get('/api/health', async () => {
     const azureConfigured = !!(process.env.AZURE_OPENAI_API_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
