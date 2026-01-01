@@ -98,10 +98,10 @@ export class RulesManager extends LitElement {
           type="text"
           .value=${this.model}
           @input=${this.handleModelChange}
-          placeholder="ministral-3, llama3, azure:gpt-4o, etc."
+          placeholder="ministral-3, llama3, azure:gpt-4o, openai:gpt-4o, etc."
         />
         <small class="help-text">
-          Use Ollama models (e.g., ministral-3, llama3) or Azure OpenAI with "azure:" prefix (e.g., azure:gpt-4o, azure:gpt-4o-mini)
+          Use Ollama models (e.g., ministral-3, llama3), OpenAI with "openai:" prefix (e.g., openai:gpt-4o, openai:gpt-4o-mini), or Azure OpenAI with "azure:" prefix (e.g., azure:gpt-4o)
         </small>
       </div>
       <div class="form-group">

@@ -4,7 +4,7 @@ AI-powered bulk file and folder renaming tool with a simple web interface.
 
 ## Features
 
-- 🤖 **AI-Powered**: Uses local LLM (Ollama) to suggest intelligent file names
+- 🤖 **AI-Powered**: Uses local LLM (Ollama), OpenAI, or Azure OpenAI to suggest intelligent file names
 - 🔄 **Model Selection**: Override AI model directly from the web interface
 - 🖱️ **Drag & Drop**: Easy file and folder selection
 - 🌐 **Web Interface**: Clean, responsive UI that opens automatically
@@ -16,7 +16,10 @@ AI-powered bulk file and folder renaming tool with a simple web interface.
 ## Prerequisites
 
 - Node.js v20 or higher
-- [Ollama](https://ollama.ai/) running locally with a supported model (default: `ministral-3`)
+- One of the following AI providers:
+  - [Ollama](https://ollama.ai/) running locally with a supported model (default: `ministral-3`)
+  - OpenAI API key (set `OPENAI_API_KEY` environment variable)
+  - Azure OpenAI endpoint and API key (set `AZURE_OPENAI_API_ENDPOINT` and `AZURE_OPENAI_API_KEY` environment variables)
 
 ## Installation
 
@@ -82,10 +85,86 @@ amv --no-open
 
 ### Model Selection
 
-The web interface includes an AI model field where you can specify which Ollama model to use:
-- **Default**: `ministral-3` (can be overridden via CLI `--model` flag)
-- **Override**: Enter any available Ollama model name (e.g., `llama3`, `mistral`, etc.)
+The web interface includes an AI model field where you can specify which AI provider and model to use:
+- **Default**: `ministral-3` (Ollama model, can be overridden via CLI `--model` flag)
+- **Ollama**: Enter any available Ollama model name (e.g., `llama3`, `mistral`, etc.)
+- **OpenAI**: Use `openai:` prefix followed by model name (e.g., `openai:gpt-4o`, `openai:gpt-4o-mini`)
+- **Azure OpenAI**: Use `azure:` prefix followed by deployment name (e.g., `azure:gpt-4o`)
 - **Persistence**: Your model preference is saved in browser localStorage
+
+## AI Providers
+
+### Ollama (Default)
+
+No configuration required. Make sure [Ollama](https://ollama.ai/) is running locally:
+
+```bash
+# Start Ollama (if not already running)
+ollama serve
+
+# Pull a model if needed
+ollama pull ministral-3
+```
+
+### OpenAI
+
+Set the `OPENAI_API_KEY` environment variable:
+
+```bash
+# Linux/macOS
+export OPENAI_API_KEY="sk-..."
+
+# Windows (PowerShell)
+$env:OPENAI_API_KEY="sk-..."
+
+# Or use a .env file in the current directory
+echo "OPENAI_API_KEY=sk-..." > .env
+```
+
+Optionally, set `OPENAI_BASE_URL` to use a custom API endpoint (e.g., for OpenAI-compatible APIs or proxies):
+
+```bash
+# Linux/macOS
+export OPENAI_BASE_URL="https://your-proxy.example.com/v1"
+
+# Windows (PowerShell)
+$env:OPENAI_BASE_URL="https://your-proxy.example.com/v1"
+
+# Or use a .env file
+echo "OPENAI_BASE_URL=https://your-proxy.example.com/v1" >> .env
+```
+
+Then use OpenAI models with the `openai:` prefix:
+
+```bash
+amv --model openai:gpt-4o
+# or in the web interface: openai:gpt-4o-mini
+```
+
+### Azure OpenAI
+
+Set the required environment variables:
+
+```bash
+# Linux/macOS
+export AZURE_OPENAI_API_ENDPOINT="https://your-resource.openai.azure.com"
+export AZURE_OPENAI_API_KEY="your-api-key"
+
+# Windows (PowerShell)
+$env:AZURE_OPENAI_API_ENDPOINT="https://your-resource.openai.azure.com"
+$env:AZURE_OPENAI_API_KEY="your-api-key"
+
+# Or use a .env file in the current directory
+echo "AZURE_OPENAI_API_ENDPOINT=https://your-resource.openai.azure.com" > .env
+echo "AZURE_OPENAI_API_KEY=your-api-key" >> .env
+```
+
+Then use Azure deployments with the `azure:` prefix:
+
+```bash
+amv --model azure:gpt-4o
+# or in the web interface: azure:your-deployment-name
+```
 
 ## Example Renaming Rules
 
@@ -100,7 +179,7 @@ The web interface includes an AI model field where you can specify which Ollama 
 - **Frontend**: Lit v3 web components, modern CSS
 - **Backend**: Fastify server with REST API
 - **CLI**: Commander.js
-- **AI**: OpenAI SDK with Ollama integration
+- **AI**: OpenAI SDK with support for Ollama, OpenAI, and Azure OpenAI
 - **Build**: Vite with TypeScript
 
 ## Development

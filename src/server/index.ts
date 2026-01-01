@@ -34,6 +34,25 @@ function createOpenAIClient(model: string): OpenAI {
         'api-key': apiKey,
       },
     });
+  } else if (model.startsWith('openai:')) {
+    // OpenAI configuration
+    const apiKey = process.env.OPENAI_API_KEY;
+    const baseURL = process.env.OPENAI_BASE_URL;
+    
+    if (!apiKey) {
+      throw new Error('OpenAI requires OPENAI_API_KEY environment variable');
+    }
+    
+    const modelName = model.slice(7); // Remove "openai:" prefix
+    console.log(`Creating OpenAI client for model: ${modelName}`);
+    if (baseURL) {
+      console.log(`Using custom base URL: ${baseURL}`);
+    }
+    
+    return new OpenAI({
+      apiKey,
+      ...(baseURL && { baseURL }),
+    });
   } else {
     // Ollama configuration (default)
     console.log(`Creating Ollama client for model: ${model}`);
@@ -76,11 +95,22 @@ export async function startServer(port: number, defaultModel: string) {
       // Initialize OpenAI client based on model type (create per request to allow different models)
       const openai = createOpenAIClient(model);
       
-      // For Azure OpenAI, we use the deployment name directly as the model
-      // For Ollama, we use the model name as-is
-      const actualModel = model.startsWith('azure:') ? model.slice(6) : model;
+      // Extract the actual model name based on provider prefix
+      let actualModel: string;
+      let providerName: string;
       
-      console.log(`Using provider: ${model.startsWith('azure:') ? 'Azure OpenAI' : 'Ollama'}, model: ${actualModel}`);
+      if (model.startsWith('azure:')) {
+        actualModel = model.slice(6); // Remove "azure:" prefix
+        providerName = 'Azure OpenAI';
+      } else if (model.startsWith('openai:')) {
+        actualModel = model.slice(7); // Remove "openai:" prefix
+        providerName = 'OpenAI';
+      } else {
+        actualModel = model;
+        providerName = 'Ollama';
+      }
+      
+      console.log(`Using provider: ${providerName}, model: ${actualModel}`);
       // For streaming results as they come, consider Fastify's reply.raw.write for future improvement
       // For now, process sequentially and return all at once
       const updatedFiles: FileItem[] = [];
@@ -107,7 +137,6 @@ Example response format:
         // Retry up to 3 times
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            const isAzure = model.startsWith('azure:');
             const completionParams: any = {
               model: actualModel,
               messages: [
@@ -116,10 +145,10 @@ Example response format:
               temperature: 0.3,
             };
             
-            // Add response_format for JSON output (supported by both Azure and Ollama)
+            // Add response_format for JSON output (supported by Azure, OpenAI, and Ollama)
             completionParams.response_format = { type: 'json_object' };
             
-            console.log(`Making API call to ${isAzure ? 'Azure OpenAI' : 'Ollama'} with model: ${actualModel}`);
+            console.log(`Making API call to ${providerName} with model: ${actualModel}`);
             const response = await openai.chat.completions.create(completionParams);
 
             const content = response.choices[0]?.message?.content;
@@ -222,12 +251,14 @@ Example response format:
   // Health check
   fastify.get('/api/health', async () => {
     const azureConfigured = !!(process.env.AZURE_OPENAI_API_ENDPOINT && process.env.AZURE_OPENAI_API_KEY);
+    const openaiConfigured = !!process.env.OPENAI_API_KEY;
     return { 
       status: 'ok', 
       model: defaultModel,
       providers: {
         ollama: 'http://localhost:11434',
-        azure: azureConfigured ? 'configured' : 'not configured'
+        azure: azureConfigured ? 'configured' : 'not configured',
+        openai: openaiConfigured ? 'configured' : 'not configured'
       }
     };
   });
