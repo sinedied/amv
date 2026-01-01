@@ -50,22 +50,28 @@ dist/                 # Build output
 - OpenAI client configured for Ollama (http://localhost:11434/v1)
 - File system operations using Node.js fs/promises
 
-### Web Components (`src/web/components.ts`)
+### Web Components (`src/web/components/`)
 - `<file-manager>` - File/folder selection with drag & drop
 - `<rules-manager>` - AI rules input with localStorage persistence
 - `<file-list>` - File table with preview and rename actions
+- `<theme-toggle>` - Light/dark mode toggle with localStorage persistence
 - Event-driven communication between components
-
-## Design Guidelines
+- All components support light and dark modes using CSS custom properties
 
 ### CSS Approach
 - CSS custom properties (variables) for theming
+- Light and dark mode support using `prefers-color-scheme` and `data-theme` attribute
+- Theme preference persisted in localStorage
 - Flat design with subtle shadows
 - No CSS frameworks - vanilla CSS with modern features
+- Container queries for responsive design
+- CSS nesting selectorsanilla CSS with modern features
 - Container queries for responsive design
 - CSS nesting selectors
 
 ### Color Scheme
+The application supports both light and dark modes using CSS custom properties and the `prefers-color-scheme` media query. Theme preference is persisted in localStorage and can be toggled via the `<theme-toggle>` component.
+
 ```css
 :root {
   --primary-color: #4f46e5;
@@ -73,9 +79,48 @@ dist/                 # Build output
   --background: #f8fafc;
   --surface: #ffffff;
   --text-primary: #111827;
+  --text-secondary: #6b7280;
   --border: #e5e7eb;
   --success: #10b981;
   --danger: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #6366f1;
+    --primary-hover: #818cf8;
+    --background: #0f172a;
+    --surface: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border: #334155;
+    --success: #34d399;
+    --danger: #f87171;
+  }
+}
+
+[data-theme="light"] {
+  --primary-color: #4f46e5;
+  --primary-hover: #3730a3;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --success: #10b981;
+  --danger: #ef4444;
+}
+
+[data-theme="dark"] {
+  --primary-color: #6366f1;
+  --primary-hover: #818cf8;
+  --background: #0f172a;
+  --surface: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #334155;
+  --success: #34d399;
+  --danger: #f87171;
 }
 ```
 
@@ -149,12 +194,14 @@ npm run dev      # Watch mode for development
 3. **AI Suggestions**: Generate new names using local LLM
 4. **Preview**: Show original vs suggested names in table
 5. **Batch Rename**: Apply changes to all selected files
-6. **Persistence**: Save rules in localStorage
-
 ### User Experience
 - Single command startup (`amv`)
 - Auto-open browser
 - Real-time feedback and loading states
+- Error handling with user-friendly messages
+- Responsive design for mobile/desktop
+- Light and dark mode support with system preference detection
+- Manual theme toggle with preference persistences
 - Error handling with user-friendly messages
 - Responsive design for mobile/desktop
 
