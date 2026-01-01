@@ -121,6 +121,19 @@ $env:OPENAI_API_KEY="sk-..."
 echo "OPENAI_API_KEY=sk-..." > .env
 ```
 
+Optionally, set `OPENAI_BASE_URL` to use a custom API endpoint (e.g., for OpenAI-compatible APIs or proxies):
+
+```bash
+# Linux/macOS
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+
+# Windows (PowerShell)
+$env:OPENAI_BASE_URL="https://api.openai.com/v1"
+
+# Or use a .env file
+echo "OPENAI_BASE_URL=https://api.openai.com/v1" >> .env
+```
+
 Then use OpenAI models with the `openai:` prefix:
 
 ```bash

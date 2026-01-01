@@ -37,6 +37,7 @@ function createOpenAIClient(model: string): OpenAI {
   } else if (model.startsWith('openai:')) {
     // OpenAI configuration
     const apiKey = process.env.OPENAI_API_KEY;
+    const baseURL = process.env.OPENAI_BASE_URL;
     
     if (!apiKey) {
       throw new Error('OpenAI requires OPENAI_API_KEY environment variable');
@@ -44,9 +45,13 @@ function createOpenAIClient(model: string): OpenAI {
     
     const modelName = model.slice(7); // Remove "openai:" prefix
     console.log(`Creating OpenAI client for model: ${modelName}`);
+    if (baseURL) {
+      console.log(`Using custom base URL: ${baseURL}`);
+    }
     
     return new OpenAI({
       apiKey,
+      ...(baseURL && { baseURL }),
     });
   } else {
     // Ollama configuration (default)
