@@ -57,7 +57,7 @@ export class RulesManager extends LitElement {
     }
 
     select {
-      background-color: white;
+      background-color: var(--surface);
       cursor: pointer;
       width: auto;
       min-width: 200px;
