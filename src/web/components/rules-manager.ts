@@ -242,7 +242,7 @@ export class RulesManager extends LitElement {
       const response = await fetch('/api/ollama/models');
       const data = await response.json();
       
-      if (response.ok && data.models && data.models.length > 0) {
+      if (response.ok && Array.isArray(data.models) && data.models.length > 0) {
         this.ollamaModels = data.models;
         this.isOllamaAvailable = true;
       } else {
