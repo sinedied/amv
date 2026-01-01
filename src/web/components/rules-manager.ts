@@ -112,7 +112,11 @@ export class RulesManager extends LitElement {
             ?disabled=${!this.isOllamaAvailable || this.ollamaModels.length === 0}
             title=${!this.isOllamaAvailable ? 'Ollama not available' : this.ollamaModels.length === 0 ? 'No models available' : 'Select an Ollama model'}
           >
-            <option value="">Select Ollama model...</option>
+            <option value="">
+              ${!this.isOllamaAvailable || this.ollamaModels.length === 0 
+                ? 'Ollama not available' 
+                : 'Select Ollama model...'}
+            </option>
             ${this.ollamaModels.map(model => html`
               <option value="${model}">${model}</option>
             `)}
