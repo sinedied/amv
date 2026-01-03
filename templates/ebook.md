@@ -4,7 +4,7 @@
 - "<serie> - Intégrale - Txx" (if "intégrale" is in the name)
 If it's an "Hors Série" (HS) or no Txx is provided, use "HS" or "HSxx" instead of "TXX". T00 is valid.
 
-2. Fix the case: <serie> and <title> should be capitalized according to French: only first letter of a phrase and proper nouns are capitalized, the rest is lowercase.
+2. Fix the case: <title> is capitalized according to French: only first letter of the title and proper nouns are capitalized, the rest is lowercase.
 
 3. Keep spaces and accents.
 
